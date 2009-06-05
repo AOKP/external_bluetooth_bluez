@@ -97,3 +97,4 @@ int remove_record_from_server(uint32_t handle);
 void create_ext_inquiry_response(const char *name,
 					int8_t tx_power, sdp_list_t *services,
 					uint8_t *data);
+static inline int android_get_control_socket(const char *name);
