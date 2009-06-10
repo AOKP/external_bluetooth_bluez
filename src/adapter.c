@@ -33,6 +33,10 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 
+#ifdef ANDROID_EXPAND_NAME
+#include <cutils/properties.h>
+#endif
+
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/sdp.h>
 #include <bluetooth/sdp_lib.h>
@@ -188,6 +192,10 @@ static char *expand_name(char *dst, int size, char *str, int dev_id)
 	register int sp, np, olen;
 	char *opt, buf[10];
 
+#ifdef ANDROID_EXPAND_NAME
+	char value[PROPERTY_VALUE_MAX];
+#endif
+
 	if (!str || !dst)
 		return NULL;
 
@@ -206,6 +214,23 @@ static char *expand_name(char *dst, int size, char *str, int dev_id)
 			case 'h':
 				opt = main_opts.host_name;
 				break;
+
+#ifdef ANDROID_EXPAND_NAME
+			case 'b':
+				property_get("ro.product.brand", value, "");
+				opt = value;
+			break;
+
+			case 'm':
+				property_get("ro.product.model", value, "");
+				opt = value;
+			break;
+
+			case 'n':
+				property_get("ro.product.name", value, "");
+				opt = value;
+			break;
+#endif
 
 			case '%':
 				dst[np++] = str[sp++];
