@@ -1,4 +1,6 @@
 LOCAL_PATH:= $(call my-dir)
+BUILD_BTIOTEST:=0
+BUILD_HCIEMU:=0
 
 #
 # hstest
@@ -202,6 +204,7 @@ LOCAL_MODULE:=bdaddr
 
 include $(BUILD_EXECUTABLE)
 
+ifeq ($(BUILD_BTIOTEST),1)
 #
 # btiotest
 #
@@ -231,7 +234,10 @@ LOCAL_MODULE_TAGS := eng
 LOCAL_MODULE:=btiotest
 
 include $(BUILD_EXECUTABLE)
+endif #BTIOTEST
 
+
+ifeq ($(BUILD_HCIEMU),1)
 #
 # hciemu
 #
@@ -264,6 +270,7 @@ LOCAL_MODULE_TAGS := eng
 LOCAL_MODULE:=hciemu
 
 include $(BUILD_EXECUTABLE)
+endif #BUILD_HCIEMU
 
 #
 # lmptest
