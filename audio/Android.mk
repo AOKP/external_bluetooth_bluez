@@ -60,7 +60,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= \
 	liba2dp.c \
 	ipc.c \
-	../sbc/sbc_primitives.c
+	../sbc/sbc_primitives.c \
+	../sbc/sbc_primitives_neon.c
 
 ifeq ($(TARGET_ARCH),x86)
 LOCAL_SRC_FILES+= \
