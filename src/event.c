@@ -196,6 +196,18 @@ int btd_event_user_confirm(bdaddr_t *sba, bdaddr_t *dba, uint32_t passkey)
 							passkey, confirm_cb);
 }
 
+int btd_event_user_consent(bdaddr_t *sba, bdaddr_t *dba)
+{
+	struct btd_adapter *adapter;
+	struct btd_device *device;
+
+	if (!get_adapter_and_device(sba, dba, &adapter, &device, TRUE))
+		return -ENODEV;
+
+	return device_request_authentication(device, AUTH_TYPE_PAIRING_CONSENT,
+						0, confirm_cb);
+}
+
 int btd_event_user_passkey(bdaddr_t *sba, bdaddr_t *dba)
 {
 	struct btd_adapter *adapter;
