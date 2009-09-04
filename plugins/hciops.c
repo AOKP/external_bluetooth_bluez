@@ -1083,6 +1083,7 @@ static void user_confirm_request(int index, void *ptr)
 	evt_user_confirm_request *req = ptr;
 	gboolean loc_mitm, rem_mitm;
 	struct bt_conn *conn;
+	struct agent *agent;
 
 	DBG("hci%d", index);
 
@@ -1100,6 +1101,19 @@ static void user_confirm_request(int index, void *ptr)
 	if (!conn->bonding_initiator && loc_mitm && conn->rem_cap == 0x03) {
 		error("Rejecting request: remote device can't provide MITM");
 		goto fail;
+	}
+
+	/* If local IO capabilities are DisplayYesNo and remote IO
+	 * capabiltiies are DisplayOnly or NoInputNoOutput;
+	 * call PairingConsent callback for incoming requests. */
+	if (conn->bonding_initiator == FALSE) {
+		if ((conn->loc_cap == 0x01) &&
+			(conn->rem_cap == 0x00 || conn->rem_cap == 0x03)) {
+			if (btd_event_user_consent(&dev->bdaddr, &req->bdaddr)
+					< 0)
+				goto fail;
+			return;
+		}
 	}
 
 	/* If no side requires MITM protection; auto-accept */
