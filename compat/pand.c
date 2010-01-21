@@ -51,6 +51,11 @@
 #include "sdp.h"
 #include "pand.h"
 
+#ifdef __ANDROID__
+#include <android/log.h>
+#define syslog android_log
+#endif
+
 #ifdef NEED_PPOLL
 #include "ppoll.h"
 #endif
@@ -99,6 +104,25 @@ struct script_arg {
 	int	nsk;
 };
 
+#ifdef __ANDROID__
+static void android_log(int priority, const char *format, ...)
+{
+    va_list ap;
+    int alog_lvl;
+
+    if (priority <= LOG_ERR)
+      alog_lvl = ANDROID_LOG_ERROR;
+    else if (priority == LOG_WARNING)
+      alog_lvl = ANDROID_LOG_WARN;
+    else if (priority <= LOG_INFO)
+      alog_lvl = ANDROID_LOG_INFO;
+    else
+      alog_lvl = ANDROID_LOG_DEBUG;
+    va_start(ap, format);
+    __android_log_vprint(alog_lvl, "pand", format, ap);
+    va_end(ap);
+}
+#endif
 static void run_script(char *script, char *dev, char *dst, int sk, int nsk)
 {
 	char *argv[4];
