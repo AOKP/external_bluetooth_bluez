@@ -1,4 +1,4 @@
-BUILD_PAND := false
+BUILD_PAND := true
 ifeq ($(BUILD_PAND),true)
 
 LOCAL_PATH:= $(call my-dir)
