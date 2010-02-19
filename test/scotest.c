@@ -55,6 +55,9 @@ static unsigned char *buf;
 /* Default data size */
 static long data_size = 672;
 
+/* Default packet type */
+static uint16_t pkt_type = 0;
+
 static bdaddr_t bdaddr;
 
 static float tv2fl(struct timeval tv)
@@ -91,6 +94,7 @@ static int do_connect(char *svr)
 	/* Connect to remote device */
 	memset(&addr, 0, sizeof(addr));
 	addr.sco_family = AF_BLUETOOTH;
+	addr.sco_pkt_type = pkt_type;
 	str2ba(svr, &addr.sco_bdaddr);
 
 	if (connect(sk, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
@@ -139,6 +143,7 @@ static void do_listen(void (*handler)(int sk))
 	/* Bind to local address */
 	memset(&addr, 0, sizeof(addr));
 	addr.sco_family = AF_BLUETOOTH;
+	addr.sco_pkt_type = pkt_type;
 	bacpy(&addr.sco_bdaddr, &bdaddr);
 
 	if (bind(sk, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
@@ -329,7 +334,7 @@ static void usage(void)
 {
 	printf("scotest - SCO testing\n"
 		"Usage:\n");
-	printf("\tscotest <mode> [-b bytes] [bd_addr]\n");
+	printf("\tscotest <mode> [-b bytes] [-p pkt_type] [bd_addr]\n");
 	printf("Modes:\n"
 		"\t-d dump (server)\n"
 		"\t-c reconnect (client)\n"
@@ -344,7 +349,7 @@ int main(int argc ,char *argv[])
 	struct sigaction sa;
 	int opt, sk, mode = RECV;
 
-	while ((opt=getopt(argc,argv,"rdscmnb:")) != EOF) {
+	while ((opt=getopt(argc,argv,"rdscmnb:p:")) != EOF) {
 		switch(opt) {
 		case 'r':
 			mode = RECV;
@@ -372,6 +377,13 @@ int main(int argc ,char *argv[])
 
 		case 'b':
 			data_size = atoi(optarg);
+			break;
+
+		case 'p':
+			if (sscanf(optarg, "0x%4hx", &pkt_type) != 1) {
+				usage();
+				exit(1);
+			}
 			break;
 
 		default:
