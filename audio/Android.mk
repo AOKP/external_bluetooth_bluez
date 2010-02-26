@@ -22,7 +22,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.47\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
-	-DCONFIGDIR=\"/etc/bluez\" \
+	-DCONFIGDIR=\"/etc/bluetooth\" \
 	-DANDROID \
 	-D__S_IFREG=0100000  # missing from bionic stat.h
 

@@ -26,7 +26,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.47\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
-	-DCONFIGDIR=\"/etc/bluez\" \
+	-DCONFIGDIR=\"/etc/bluetooth\" \
 	-DSERVICEDIR=\"/system/bin\" \
 	-DPLUGINDIR=\"/system/lib/bluez-plugin\" \
 	-DANDROID_SET_AID_AND_CAP \

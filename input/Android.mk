@@ -14,7 +14,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.47\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
-	-DCONFIGDIR=\"/etc/bluez\"
+	-DCONFIGDIR=\"/etc/bluetooth\"
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
