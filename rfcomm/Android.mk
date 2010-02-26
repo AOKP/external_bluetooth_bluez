@@ -9,7 +9,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.47\" \
-	-DCONFIGDIR=\"/etc/bluez\" \
+	-DCONFIGDIR=\"/etc/bluetooth\" \
 	-DNEED_PPOLL
 
 LOCAL_C_INCLUDES:= \
