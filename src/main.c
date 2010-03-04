@@ -201,10 +201,14 @@ static void parse_config(GKeyFile *config)
 	else
 		main_opts.name_resolv = boolean;
 
-	main_opts.link_mode = HCI_LM_ACCEPT;
-
-	main_opts.link_policy = HCI_LP_RSWITCH | HCI_LP_SNIFF |
-						HCI_LP_HOLD | HCI_LP_PARK;
+	str = g_key_file_get_string(config, "General",
+						"DefaultLinkPolicy", &err);
+	if (err)
+		g_clear_error(&err);
+	else {
+		debug("default_link_policy=%s", str);
+		main_opts.link_policy &= strtol(str, NULL, 16);
+	}
 }
 
 /*
@@ -297,6 +301,9 @@ static void init_defaults(void)
 	main_opts.remember_powered = TRUE;
 	main_opts.reverse_sdp = TRUE;
 	main_opts.name_resolv = TRUE;
+	main_opts.link_mode = HCI_LM_ACCEPT;
+	main_opts.link_policy = HCI_LP_RSWITCH | HCI_LP_SNIFF |
+						HCI_LP_HOLD | HCI_LP_PARK;
 
 	if (gethostname(main_opts.host_name, sizeof(main_opts.host_name) - 1) < 0)
 		strcpy(main_opts.host_name, "noname");
