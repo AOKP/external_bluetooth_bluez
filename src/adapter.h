@@ -237,6 +237,7 @@ struct btd_adapter_ops {
 	int (*set_io_capability) (int index, uint8_t io_capability);
 	int (*create_bonding) (int index, bdaddr_t *bdaddr, uint8_t io_cap);
 	int (*cancel_bonding) (int index, bdaddr_t *bdaddr);
+	int (*set_link_timeout) (int index, bdaddr_t *bdaddr, uint32_t num_slots);
 };
 
 int btd_register_adapter_ops(struct btd_adapter_ops *ops, gboolean priority);
