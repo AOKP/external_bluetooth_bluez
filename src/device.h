@@ -84,6 +84,7 @@ gboolean device_set_debug_key(struct btd_device *device, uint8_t *key);
 gboolean device_get_debug_key(struct btd_device *device, uint8_t *key);
 void device_add_connection(struct btd_device *device, DBusConnection *conn,
 				uint16_t handle);
+uint16_t device_get_handle(struct btd_device *device);
 void device_remove_connection(struct btd_device *device, DBusConnection *conn,
 				uint16_t handle);
 gboolean device_has_connection(struct btd_device *device, uint16_t handle);
