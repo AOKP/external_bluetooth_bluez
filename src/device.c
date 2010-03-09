@@ -901,6 +901,11 @@ void device_remove_connection(struct btd_device *device, DBusConnection *conn)
 					DBUS_TYPE_BOOLEAN, &device->connected);
 }
 
+uint16_t device_get_handle(struct btd_device *device)
+{
+	return device->handle;
+}
+
 guint device_add_disconnect_watch(struct btd_device *device,
 				disconnect_watch watch, void *user_data,
 				GDestroyNotify destroy)

@@ -210,6 +210,7 @@ struct btd_adapter_ops {
 	int (*add_remote_oob_data) (int index, bdaddr_t *bdaddr, uint8_t *hash,
 							uint8_t *randomizer);
 	int (*remove_remote_oob_data) (int index, bdaddr_t *bdaddr);
+	int (*set_link_timeout) (int index, bdaddr_t *bdaddr, uint32_t num_slots);
 };
 
 int btd_register_adapter_ops(struct btd_adapter_ops *ops, gboolean priority);

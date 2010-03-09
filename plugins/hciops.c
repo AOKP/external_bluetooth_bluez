@@ -3663,6 +3663,32 @@ static int hciops_remove_remote_oob_data(int index, bdaddr_t *bdaddr)
 	return 0;
 }
 
+static int hciops_set_link_timeout(int index, bdaddr_t *bdaddr, uint32_t num_slots)
+{
+	int dd, err;
+	uint16_t handle;
+	char addr[18];
+
+	ba2str(bdaddr, addr);
+	DBG("hci%d, addr %s, num_slots %d", index, bdaddr, num_slots);
+
+	dd = hci_open_dev(index);
+
+	if (dd < 0)
+		return EIO;
+
+	handle = get_handle(index, bdaddr, &handle);
+	err = hci_write_link_supervision_timeout(dd, htobs(handle),
+			htobs(num_slots), 1000);
+	if (err < 0)
+		err = -errno;
+
+	hci_close_dev(dd);
+
+	return err;
+}
+
+
 static struct btd_adapter_ops hci_ops = {
 	.setup = hciops_setup,
 	.cleanup = hciops_cleanup,
@@ -3702,6 +3728,7 @@ static struct btd_adapter_ops hci_ops = {
 	.read_local_oob_data = hciops_read_local_oob_data,
 	.add_remote_oob_data = hciops_add_remote_oob_data,
 	.remove_remote_oob_data = hciops_remove_remote_oob_data,
+	.set_link_timeout = hciops_set_link_timeout,
 };
 
 static int hciops_init(void)

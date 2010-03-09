@@ -1981,7 +1981,6 @@ static DBusMessage *add_rfcomm_service_record(DBusConnection *conn,
 				ERROR_INTERFACE ".Failed",
 				"Failed to register sdp record");
 
-	printf("npelly new handle %X\n", record->handle);
 	reply = dbus_message_new_method_return(msg);
 	dbus_message_append_args(reply,
 			DBUS_TYPE_UINT32, &record->handle,
@@ -2005,6 +2004,39 @@ static DBusMessage *remove_service_record(DBusConnection *conn,
 		return g_dbus_create_error(msg,
 				ERROR_INTERFACE ".Failed",
 				"Failed to remove sdp record");
+
+	return dbus_message_new_method_return(msg);
+}
+
+static DBusMessage *set_link_timeout(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	struct btd_adapter *adapter = data;
+        struct btd_device *device;
+	const char *path;
+	GSList *l;
+	uint32_t num_slots;
+        int dd, err;
+	bdaddr_t bdaddr;
+
+	if (!dbus_message_get_args(msg, NULL,
+			DBUS_TYPE_OBJECT_PATH, &path,
+			DBUS_TYPE_UINT32, &num_slots,
+			DBUS_TYPE_INVALID))
+		return btd_error_invalid_args(msg);
+
+        l = g_slist_find_custom(adapter->devices,
+                        path, (GCompareFunc) device_path_cmp);
+        if (!l)
+                return g_dbus_create_error(msg,
+                                ERROR_INTERFACE ".DoesNotExist",
+                                "Device does not exist");
+	device_get_address(l->data, &bdaddr);
+
+	err = adapter_ops->set_link_timeout(adapter->dev_id, &bdaddr,
+			num_slots);
+	if (err < 0)
+		return btd_error_failed(msg, strerror(-err));
 
 	return dbus_message_new_method_return(msg);
 }
@@ -2034,6 +2066,7 @@ static GDBusMethodTable adapter_methods[] = {
 	{ "UnregisterAgent",	"o",	"",	unregister_agent	},
 	{ "AddRfcommServiceRecord",	"sttq",	"u",	add_rfcomm_service_record },
 	{ "RemoveServiceRecord",	"u",	"",	remove_service_record },
+	{ "SetLinkTimeout",	"ou",	"",	set_link_timeout	},
 	{ }
 };
 
