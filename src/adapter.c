@@ -1735,7 +1735,6 @@ static DBusMessage *add_rfcomm_service_record(DBusConnection *conn,
 				ERROR_INTERFACE ".Failed",
 				"Failed to register sdp record");
 
-	printf("npelly new handle %X\n", record->handle);
 	reply = dbus_message_new_method_return(msg);
 	dbus_message_append_args(reply,
 			DBUS_TYPE_UINT32, &record->handle,
@@ -1763,6 +1762,49 @@ static DBusMessage *remove_service_record(DBusConnection *conn,
 	return dbus_message_new_method_return(msg);
 }
 
+static DBusMessage *set_link_timeout(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	struct btd_adapter *adapter = data;
+        struct btd_device *device;
+	const char *path;
+	GSList *l;
+	uint32_t num_slots;
+        int dd, err;
+
+	if (!dbus_message_get_args(msg, NULL,
+			DBUS_TYPE_OBJECT_PATH, &path,
+			DBUS_TYPE_UINT32, &num_slots,
+			DBUS_TYPE_INVALID))
+		return invalid_args(msg);
+
+        l = g_slist_find_custom(adapter->devices,
+                        path, (GCompareFunc) device_path_cmp);
+        if (!l)
+                return g_dbus_create_error(msg,
+                                ERROR_INTERFACE ".DoesNotExist",
+                                "Device does not exist");
+	device = l->data;
+	dd = hci_open_dev(adapter->dev_id);
+
+	if (dd < 0) {
+		err = -errno;
+		goto fail;
+	}
+
+	err = hci_write_link_supervision_timeout(dd,
+			htobs(device_get_handle(device)), htobs(num_slots), 1000);
+	hci_close_dev(dd);
+
+	if (err < 0) {
+		err = -errno;
+		goto fail;
+	}
+	return dbus_message_new_method_return(msg);
+fail:
+	return failed_strerror(msg, errno);
+}
+
 static GDBusMethodTable adapter_methods[] = {
 	{ "GetProperties",	"",	"a{sv}",get_properties		},
 	{ "SetProperty",	"sv",	"",	set_property,
@@ -1788,6 +1830,7 @@ static GDBusMethodTable adapter_methods[] = {
 	{ "UnregisterAgent",	"o",	"",	unregister_agent	},
 	{ "AddRfcommServiceRecord",	"sttq",	"u",	add_rfcomm_service_record },
 	{ "RemoveServiceRecord",	"u",	"",	remove_service_record },
+	{ "SetLinkTimeout",	"ou",	"",	set_link_timeout	},
 	{ }
 };
 
