@@ -80,6 +80,7 @@ void device_set_authorizing(struct btd_device *device, gboolean auth);
 void device_set_renewed_key(struct btd_device *device, gboolean renewed);
 void device_add_connection(struct btd_device *device, DBusConnection *conn,
 				uint16_t handle);
+uint16_t device_get_handle(struct btd_device *device);
 void device_remove_connection(struct btd_device *device, DBusConnection *conn,
 				uint16_t handle);
 gboolean device_has_connection(struct btd_device *device, uint16_t handle);
