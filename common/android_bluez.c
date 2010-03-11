@@ -187,7 +187,7 @@ int android_set_high_priority(bdaddr_t *ba) {
     ret = vendor_high_priority(fd, acl_handle);
     if (ret < 0)
         goto out;
-    ret = write_flush_timeout(fd, acl_handle, 120);
+    ret = write_flush_timeout(fd, acl_handle, 200);
 
 out:
     close(fd);
