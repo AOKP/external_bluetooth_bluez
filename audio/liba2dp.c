@@ -96,7 +96,7 @@
 #define WRITE_TIMEOUT			1000
 
 /* timeout in seconds for command socket recv() */
-#define RECV_TIMEOUT            5
+#define RECV_TIMEOUT			5
 
 
 typedef enum {
@@ -271,9 +271,9 @@ static int bluetooth_start(struct bluetooth_data *data)
 	return 0;
 
 error:
-	/* set state to A2DP_STATE_INITIALIZED to force reconfiguration */
+	/* close bluetooth connection to force reinit and reconfiguration */
 	if (data->state == A2DP_STATE_STARTING)
-		set_state(data, A2DP_STATE_INITIALIZED);
+		bluetooth_close(data);
 	return err;
 }
 
@@ -734,7 +734,7 @@ static int audioservice_send(struct bluetooth_data *data,
 
 	length = msg->length ? msg->length : BT_SUGGESTED_BUFFER_SIZE;
 
-	VDBG("sending %s", bt_audio_strmsg(msg->msg_type));
+	VDBG("sending %s", bt_audio_strtype(msg->type));
 	if (send(data->server.fd, msg, length,
 			MSG_NOSIGNAL) > 0)
 		err = 0;
@@ -823,17 +823,21 @@ static int audioservice_expect(struct bluetooth_data *data,
 static int bluetooth_init(struct bluetooth_data *data)
 {
 	int sk, err;
-        struct timeval tv = {.tv_sec = RECV_TIMEOUT};
+	struct timeval tv = {.tv_sec = RECV_TIMEOUT};
 
 	DBG("bluetooth_init");
 
 	sk = bt_audio_service_open();
-	if (sk <= 0) {
+	if (sk < 0) {
 		ERR("bt_audio_service_open failed\n");
 		return -errno;
 	}
 
-        setsockopt(sk, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	err = setsockopt(sk, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+	if (err < 0) {
+		ERR("bluetooth_init setsockopt(SO_RCVTIMEO) failed %d", err);
+		return err;
+	}
 
 	data->server.fd = sk;
 	data->server.events = POLLIN;
@@ -849,15 +853,19 @@ static int bluetooth_parse_capabilities(struct bluetooth_data *data,
 	codec_capabilities_t *codec = (void *) rsp->data;
 
 	if (codec->transport != BT_CAPABILITIES_TRANSPORT_A2DP)
-		return 0;
+		return -EINVAL;
 
 	while (bytes_left > 0) {
 		if ((codec->type == BT_A2DP_SBC_SINK) &&
-				!(codec->lock & BT_WRITE_LOCK))
+			!(codec->lock & BT_WRITE_LOCK))
 			break;
 
+		if (codec->length == 0) {
+			ERR("bluetooth_parse_capabilities() invalid codec capabilities length");
+			return -EINVAL;
+		}
 		bytes_left -= codec->length;
-		codec = (void *) (codec + codec->length);
+		codec = (codec_capabilities_t *)((char *)codec + codec->length);
 	}
 
 	if (bytes_left <= 0 ||
@@ -902,19 +910,26 @@ static int bluetooth_configure(struct bluetooth_data *data)
 		goto error;
 	}
 
-	bluetooth_parse_capabilities(data, getcaps_rsp);
+	err = bluetooth_parse_capabilities(data, getcaps_rsp);
+	if (err < 0) {
+		ERR("bluetooth_parse_capabilities failed err: %d", err);
+		goto error;
+	}
+
 	err = bluetooth_a2dp_hw_params(data);
 	if (err < 0) {
 		ERR("bluetooth_a2dp_hw_params failed err: %d", err);
 		goto error;
 	}
 
+
 	set_state(data, A2DP_STATE_CONFIGURED);
 	return 0;
 
 error:
+
 	if (data->state == A2DP_STATE_CONFIGURING)
-		set_state(data, A2DP_STATE_INITIALIZED);
+		bluetooth_close(data);
 	return err;
 }
 
@@ -1013,6 +1028,7 @@ static void* a2dp_thread(void *d)
 {
 	struct bluetooth_data* data = (struct bluetooth_data*)d;
 	a2dp_command_t command = A2DP_CMD_NONE;
+	int err = 0;
 
 	DBG("a2dp_thread started");
 	prctl(PR_SET_NAME, (int)"a2dp_thread", 0, 0, 0);
@@ -1029,8 +1045,8 @@ static void* a2dp_thread(void *d)
 
 			/* Initialization needed */
 			if (data->state == A2DP_STATE_NONE &&
-			    data->command != A2DP_CMD_QUIT) {
-				bluetooth_init(data);
+				data->command != A2DP_CMD_QUIT) {
+				err = bluetooth_init(data);
 			}
 
 			/* New state command signaled */
@@ -1044,19 +1060,19 @@ static void* a2dp_thread(void *d)
 			case A2DP_CMD_CONFIGURE:
 				if (data->state != A2DP_STATE_INITIALIZED)
 					break;
-				bluetooth_configure(data);
+				err = bluetooth_configure(data);
 				break;
 
 			case A2DP_CMD_START:
 				if (data->state != A2DP_STATE_CONFIGURED)
 					break;
-				bluetooth_start(data);
+				err = bluetooth_start(data);
 				break;
 
 			case A2DP_CMD_STOP:
 				if (data->state != A2DP_STATE_STARTED)
 					break;
-				bluetooth_stop(data);
+				err = bluetooth_stop(data);
 				break;
 
 			case A2DP_CMD_QUIT:
@@ -1069,6 +1085,11 @@ static void* a2dp_thread(void *d)
 				/* already called bluetooth_init() */
 			default:
 				break;
+		}
+		// reset last command in case of error to allow
+		// re-execution of the same command
+		if (err < 0) {
+			command = A2DP_CMD_NONE;
 		}
 	}
 
