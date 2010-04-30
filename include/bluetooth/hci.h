@@ -4,7 +4,7 @@
  *
  *  Copyright (C) 2000-2001  Qualcomm Incorporated
  *  Copyright (C) 2002-2003  Maxim Krasnyansky <maxk@qualcomm.com>
- *  Copyright (C) 2002-2009  Marcel Holtmann <marcel@holtmann.org>
+ *  Copyright (C) 2002-2010  Marcel Holtmann <marcel@holtmann.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -47,7 +47,7 @@ extern "C" {
 #define HCI_DEV_SUSPEND	5
 #define HCI_DEV_RESUME	6
 
-/* HCI device types */
+/* HCI bus types */
 #define HCI_VIRTUAL	0
 #define HCI_USB		1
 #define HCI_PCCARD	2
@@ -55,6 +55,10 @@ extern "C" {
 #define HCI_RS232	4
 #define HCI_PCI		5
 #define HCI_SDIO	6
+
+/* HCI controller types */
+#define HCI_BREDR	0x00
+#define HCI_80211	0x01
 
 /* HCI device flags */
 enum {
@@ -253,6 +257,8 @@ enum {
 #define LMP_EV5		0x02
 #define LMP_AFH_CAP_SLV	0x08
 #define LMP_AFH_CLS_SLV	0x10
+#define LMP_NO_BREDR	0x20
+#define LMP_LE		0x40
 #define LMP_EDR_3SLOT	0x80
 
 #define LMP_EDR_5SLOT	0x01
@@ -265,6 +271,7 @@ enum {
 #define LMP_EDR_3S_ESCO	0x80
 
 #define LMP_EXT_INQ	0x01
+#define LMP_LE_BREDR	0x02
 #define LMP_SIMPLE_PAIR	0x08
 #define LMP_ENCAPS_PDU	0x10
 #define LMP_ERR_DAT_REP	0x20
@@ -272,6 +279,7 @@ enum {
 
 #define LMP_LSTO	0x01
 #define LMP_INQ_TX_PWR	0x02
+#define LMP_EPC		0x04
 #define LMP_EXT_FEAT	0x80
 
 /* Link policies */
@@ -1069,6 +1077,13 @@ typedef struct {
 	uint8_t		randomizer[16];
 } __attribute__ ((packed)) read_local_oob_data_rp;
 #define READ_LOCAL_OOB_DATA_RP_SIZE 33
+
+#define OCF_READ_INQ_RESPONSE_TX_POWER_LEVEL	0x0058
+typedef struct {
+	uint8_t		status;
+	int8_t		level;
+} __attribute__ ((packed)) read_inq_response_tx_power_level_rp;
+#define READ_INQ_RESPONSE_TX_POWER_LEVEL_RP_SIZE 2
 
 #define OCF_READ_INQUIRY_TRANSMIT_POWER_LEVEL	0x0058
 typedef struct {

@@ -18,7 +18,6 @@ LOCAL_CFLAGS:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common \
 	$(LOCAL_PATH)/../src \
 	$(LOCAL_PATH)/../gdbus \
 	$(call include-path-for, glib) \

@@ -16,6 +16,7 @@ LOCAL_SRC_FILES:= \
 	manager.c \
 	module-bluetooth-sink.c \
 	sink.c \
+	source.c \
 	telephony-dummy.c \
 	unix.c
 
@@ -28,7 +29,6 @@ LOCAL_CFLAGS:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common \
 	$(LOCAL_PATH)/../gdbus \
 	$(LOCAL_PATH)/../src \
 	$(call include-path-for, glib) \

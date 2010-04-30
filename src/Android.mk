@@ -7,21 +7,29 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
+	android_bluez.c \
 	adapter.c \
 	agent.c \
+	btio.c \
 	dbus-common.c \
 	dbus-hci.c \
 	device.c \
 	error.c \
+	glib-helper.c \
+	logging.c \
 	main.c \
 	manager.c \
+	oui.c \
 	plugin.c \
+	rfkill.c \
 	sdpd-request.c \
 	sdpd-service.c \
 	sdpd-server.c \
 	sdpd-database.c \
+	sdp-xml.c \
 	security.c \
-	storage.c
+	storage.c \
+	textfile.c
 
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.47\" \
@@ -34,7 +42,6 @@ LOCAL_CFLAGS:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common \
 	$(LOCAL_PATH)/../gdbus \
 	$(LOCAL_PATH)/../plugins \
 	$(call include-path-for, glib) \
@@ -49,7 +56,6 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_STATIC_LIBRARIES := \
 	libglib_static \
-	libbluez-common-static \
 	libbuiltinplugin \
 	libgdbus_static
 

@@ -4,7 +4,7 @@
  *
  *  Copyright (C) 2000-2001  Qualcomm Incorporated
  *  Copyright (C) 2002-2003  Maxim Krasnyansky <maxk@qualcomm.com>
- *  Copyright (C) 2002-2009  Marcel Holtmann <marcel@holtmann.org>
+ *  Copyright (C) 2002-2010  Marcel Holtmann <marcel@holtmann.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -51,6 +51,9 @@ struct l2cap_options {
 	uint16_t	imtu;
 	uint16_t	flush_to;
 	uint8_t		mode;
+	uint8_t		fcs;
+	uint8_t		max_tx;
+	uint16_t	txwin_size;
 };
 
 #define L2CAP_CONNINFO	0x02

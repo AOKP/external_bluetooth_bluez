@@ -4,7 +4,7 @@
  *
  *  Copyright (C) 2000-2001  Qualcomm Incorporated
  *  Copyright (C) 2002-2003  Maxim Krasnyansky <maxk@qualcomm.com>
- *  Copyright (C) 2002-2009  Marcel Holtmann <marcel@holtmann.org>
+ *  Copyright (C) 2002-2010  Marcel Holtmann <marcel@holtmann.org>
  *
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -101,6 +101,7 @@ int hci_write_ext_inquiry_response(int dd, uint8_t fec, uint8_t *data, int to);
 int hci_read_simple_pairing_mode(int dd, uint8_t *mode, int to);
 int hci_write_simple_pairing_mode(int dd, uint8_t mode, int to);
 int hci_read_local_oob_data(int dd, uint8_t *hash, uint8_t *randomizer, int to);
+int hci_read_inq_response_tx_power_level(int dd, int8_t *level, int to);
 int hci_read_inquiry_transmit_power_level(int dd, int8_t *level, int to);
 int hci_write_inquiry_transmit_power_level(int dd, int8_t level, int to);
 int hci_read_transmit_power_level(int dd, uint16_t handle, uint8_t type, int8_t *level, int to);
@@ -117,6 +118,8 @@ int hci_read_clock(int dd, uint16_t handle, uint8_t which, uint32_t *clock, uint
 int hci_for_each_dev(int flag, int(*func)(int dd, int dev_id, long arg), long arg);
 int hci_get_route(bdaddr_t *bdaddr);
 
+char *hci_bustostr(int bus);
+char *hci_typetostr(int type);
 char *hci_dtypetostr(int type);
 char *hci_dflagstostr(uint32_t flags);
 char *hci_ptypetostr(unsigned int ptype);

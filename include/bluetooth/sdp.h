@@ -4,7 +4,7 @@
  *
  *  Copyright (C) 2001-2002  Nokia Corporation
  *  Copyright (C) 2002-2003  Maxim Krasnyansky <maxk@qualcomm.com>
- *  Copyright (C) 2002-2009  Marcel Holtmann <marcel@holtmann.org>
+ *  Copyright (C) 2002-2010  Marcel Holtmann <marcel@holtmann.org>
  *  Copyright (C) 2002-2003  Stephen Crane <steve.crane@rococosoft.com>
  *
  *
@@ -245,13 +245,16 @@ extern "C" {
 #define SDP_ATTR_GROUP_ID			0x0200
 #define SDP_ATTR_IP_SUBNET			0x0200
 #define SDP_ATTR_VERSION_NUM_LIST		0x0200
+#define SDP_ATTR_SUPPORTED_FEATURES_LIST	0x0200
 #define SDP_ATTR_SVCDB_STATE			0x0201
 
 #define SDP_ATTR_SERVICE_VERSION		0x0300
 #define SDP_ATTR_EXTERNAL_NETWORK		0x0301
 #define SDP_ATTR_SUPPORTED_DATA_STORES_LIST	0x0301
+#define SDP_ATTR_DATA_EXCHANGE_SPEC		0x0301
 #define SDP_ATTR_FAX_CLASS1_SUPPORT		0x0302
 #define SDP_ATTR_REMOTE_AUDIO_VOLUME_CONTROL	0x0302
+#define SDP_ATTR_MCAP_SUPPORTED_PROCEDURES	0x0302
 #define SDP_ATTR_FAX_CLASS20_SUPPORT		0x0303
 #define SDP_ATTR_SUPPORTED_FORMATS_LIST		0x0303
 #define SDP_ATTR_FAX_CLASS2_SUPPORT		0x0304

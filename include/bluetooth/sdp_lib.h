@@ -4,7 +4,7 @@
  *
  *  Copyright (C) 2001-2002  Nokia Corporation
  *  Copyright (C) 2002-2003  Maxim Krasnyansky <maxk@qualcomm.com>
- *  Copyright (C) 2002-2009  Marcel Holtmann <marcel@holtmann.org>
+ *  Copyright (C) 2002-2010  Marcel Holtmann <marcel@holtmann.org>
  *  Copyright (C) 2002-2003  Stephen Crane <steve.crane@rococosoft.com>
  *
  *
@@ -473,9 +473,10 @@ uuid_t *sdp_uuid32_create(uuid_t *uuid, uint32_t data);
 uuid_t *sdp_uuid128_create(uuid_t *uuid, const void *data);
 int sdp_uuid16_cmp(const void *p1, const void *p2);
 int sdp_uuid128_cmp(const void *p1, const void *p2);
-uuid_t *sdp_uuid_to_uuid128(uuid_t *uuid);
-void sdp_uuid16_to_uuid128(uuid_t *uuid128, uuid_t *uuid16);
-void sdp_uuid32_to_uuid128(uuid_t *uuid128, uuid_t *uuid32);
+int sdp_uuid_cmp(const void *p1, const void *p2);
+uuid_t *sdp_uuid_to_uuid128(const uuid_t *uuid);
+void sdp_uuid16_to_uuid128(uuid_t *uuid128, const uuid_t *uuid16);
+void sdp_uuid32_to_uuid128(uuid_t *uuid128, const uuid_t *uuid32);
 int sdp_uuid128_to_uuid(uuid_t *uuid);
 int sdp_uuid_to_proto(uuid_t *uuid);
 int sdp_uuid_extract(const uint8_t *buffer, int bufsize, uuid_t *uuid, int *scanned);
@@ -583,6 +584,20 @@ static inline int sdp_get_icon_url(const sdp_record_t *rec, char *str, int len)
 {
 	return sdp_get_string_attr(rec, SDP_ATTR_ICON_URL, str, len);
 }
+
+/*
+ * Set the supported features
+ * sf should be a list of list with each feature data
+ * Returns 0 on success -1 on fail
+ */
+int sdp_set_supp_feat(sdp_record_t *rec, const sdp_list_t *sf);
+
+/*
+ * Get the supported features
+ * seqp is set to a list of list with each feature data
+ * Returns 0 on success, if an error occurred -1 is returned and errno is set
+ */
+int sdp_get_supp_feat(const sdp_record_t *rec, sdp_list_t **seqp);
 
 sdp_record_t *sdp_extract_pdu(const uint8_t *pdata, int bufsize, int *scanned);
 sdp_record_t *sdp_copy_record(sdp_record_t *rec);

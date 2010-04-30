@@ -16,10 +16,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -41,10 +41,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -66,10 +66,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -92,10 +92,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -117,7 +117,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common \
+	$(LOCAL_PATH)/../src \
 	$(call include-path-for, dbus)
 
 LOCAL_SHARED_LIBRARIES := \
@@ -143,10 +143,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -168,10 +168,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -193,13 +193,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
-
-LOCAL_STATIC_LIBRARIES := \
-	libbluez-common-static
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -222,16 +219,15 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common \
+	$(LOCAL_PATH)/../src \
 	$(call include-path-for, glib) \
 	$(call include-path-for, glib)\glib
 
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth \
+	libbluetoothd \
 
 LOCAL_STATIC_LIBRARIES := \
-	libbluez-common-static \
 	libglib_static \
 
 
@@ -258,12 +254,12 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common \
+	$(LOCAL_PATH)/../src \
 	$(call include-path-for, glib) \
 	$(call include-path-for, glib)\glib
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth \
+	libbluetoothd \
 	libc \
 	libcutils
 
@@ -291,10 +287,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -316,10 +312,10 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common
+	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth
+	libbluetoothd
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng

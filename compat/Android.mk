@@ -17,13 +17,11 @@ LOCAL_CFLAGS:= \
 
 LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../common \
+	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetooth libcutils
-
-LOCAL_STATIC_LIBRARIES := \
-	libbluez-common-static
+	libbluetoothd \
+	libcutils
 
 LOCAL_MODULE_TAGS :=
 LOCAL_MODULE:=pand
