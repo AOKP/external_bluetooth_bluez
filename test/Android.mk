@@ -9,7 +9,7 @@ BUILD_HCIEMU:=0
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	hstest.c
@@ -34,7 +34,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	l2test.c
@@ -59,7 +59,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	rctest.c
@@ -85,7 +85,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	scotest.c
@@ -110,7 +110,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	agent.c
@@ -136,7 +136,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	attest.c
@@ -161,7 +161,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	avtest.c
@@ -186,7 +186,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	bdaddr.c
@@ -212,7 +212,7 @@ ifeq ($(BUILD_BTIOTEST),1)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	btiotest.c
@@ -247,7 +247,7 @@ ifeq ($(BUILD_HCIEMU),1)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	hciemu.c
@@ -280,7 +280,7 @@ endif #BUILD_HCIEMU
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	lmptest.c
@@ -305,7 +305,7 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\"
+	-DVERSION=\"4.64\"
 
 LOCAL_SRC_FILES:= \
 	sdptest.c

@@ -12,7 +12,7 @@ LOCAL_SRC_FILES:= \
 	server.c
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\" \
+	-DVERSION=\"4.64\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
 	-DCONFIGDIR=\"/etc/bluetooth\"
 
