@@ -19,7 +19,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -44,7 +44,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -69,7 +69,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -95,7 +95,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -146,7 +146,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -171,7 +171,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -196,7 +196,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -225,7 +225,7 @@ LOCAL_C_INCLUDES:= \
 
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd \
+	libbluetoothd libbluetooth
 
 LOCAL_STATIC_LIBRARIES := \
 	libglib_static \
@@ -260,6 +260,7 @@ LOCAL_C_INCLUDES:= \
 
 LOCAL_SHARED_LIBRARIES := \
 	libbluetoothd \
+	libbluetooth \
 	libc \
 	libcutils
 
@@ -290,7 +291,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -315,7 +316,7 @@ LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng

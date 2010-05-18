@@ -17,7 +17,7 @@ LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -42,7 +42,7 @@ LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE:=sdptool
 
@@ -68,7 +68,7 @@ LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -94,7 +94,7 @@ LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -116,7 +116,7 @@ LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 LOCAL_MODULE_TAGS := eng
@@ -145,7 +145,7 @@ LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
-	libbluetoothd
+	libbluetoothd libbluetooth
 
 LOCAL_MODULE:=hciattach
 

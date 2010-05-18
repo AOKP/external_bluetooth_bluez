@@ -21,6 +21,7 @@ LOCAL_C_INCLUDES:=\
 
 LOCAL_SHARED_LIBRARIES := \
 	libbluetoothd \
+	libbluetooth \
 	libcutils
 
 LOCAL_MODULE_TAGS :=
