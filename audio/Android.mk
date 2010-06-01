@@ -28,7 +28,7 @@ LOCAL_CFLAGS:= \
 	-D__S_IFREG=0100000  # missing from bionic stat.h
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../gdbus \
 	$(LOCAL_PATH)/../src \
 	$(call include-path-for, glib) \

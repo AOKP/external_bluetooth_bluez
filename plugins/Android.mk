@@ -14,7 +14,7 @@ LOCAL_CFLAGS:= \
 	-DBLUETOOTH_PLUGIN_BUILTIN \
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
         $(LOCAL_PATH)/../gdbus \
         $(LOCAL_PATH)/../src \
         $(call include-path-for, glib) \

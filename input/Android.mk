@@ -17,7 +17,7 @@ LOCAL_CFLAGS:= \
 	-DCONFIGDIR=\"/etc/bluetooth\"
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 	$(LOCAL_PATH)/../gdbus \
 	$(call include-path-for, glib) \

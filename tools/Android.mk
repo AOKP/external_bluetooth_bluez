@@ -13,7 +13,7 @@ LOCAL_CFLAGS:= \
 	-DVERSION=\"4.64\"
 
 LOCAL_C_INCLUDES:=\
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
@@ -38,7 +38,7 @@ LOCAL_CFLAGS:= \
 	-DVERSION=\"4.64\" -fpermissive
 
 LOCAL_C_INCLUDES:=\
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
@@ -64,7 +64,7 @@ LOCAL_CFLAGS:= \
 	-DVERSION=\"4.64\"
 
 LOCAL_C_INCLUDES:=\
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
@@ -90,7 +90,7 @@ LOCAL_CFLAGS:= \
 	-DVERSION=\"4.64\"
 
 LOCAL_C_INCLUDES:=\
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
@@ -112,7 +112,7 @@ LOCAL_SRC_FILES:= \
 	l2ping.c
 
 LOCAL_C_INCLUDES:=\
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
@@ -141,7 +141,7 @@ LOCAL_CFLAGS:= \
 	-D__BSD_VISIBLE=1
 
 LOCAL_C_INCLUDES:=\
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \
@@ -170,7 +170,7 @@ LOCAL_CFLAGS:= \
 
 LOCAL_C_INCLUDES:= \
         $(LOCAL_PATH)/../src \
-        $(LOCAL_PATH)/../include
+        $(LOCAL_PATH)/../lib
 
 LOCAL_SHARED_LIBRARIES := \
         libbluetooth
@@ -180,4 +180,3 @@ LOCAL_MODULE_TAGS := eng
 LOCAL_MODULE:=rfcomm
 
 include $(BUILD_EXECUTABLE)
-

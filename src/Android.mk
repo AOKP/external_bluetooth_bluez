@@ -41,7 +41,7 @@ LOCAL_CFLAGS:= \
 	-DANDROID_EXPAND_NAME
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../gdbus \
 	$(LOCAL_PATH)/../plugins \
 	$(call include-path-for, glib) \

@@ -16,7 +16,7 @@ LOCAL_CFLAGS:= \
 	-DVERSION=\"4.64\" -DSTORAGEDIR=\"/data/misc/bluetoothd\" -DNEED_PPOLL -D__ANDROID__
 
 LOCAL_C_INCLUDES:=\
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 
 LOCAL_SHARED_LIBRARIES := \

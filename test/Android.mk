@@ -15,7 +15,7 @@ LOCAL_SRC_FILES:= \
 	hstest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -40,7 +40,7 @@ LOCAL_SRC_FILES:= \
 	l2test.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -65,7 +65,7 @@ LOCAL_SRC_FILES:= \
 	rctest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -91,7 +91,7 @@ LOCAL_SRC_FILES:= \
 	scotest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -116,7 +116,7 @@ LOCAL_SRC_FILES:= \
 	agent.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 	$(call include-path-for, dbus)
 
@@ -142,7 +142,7 @@ LOCAL_SRC_FILES:= \
 	attest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -167,7 +167,7 @@ LOCAL_SRC_FILES:= \
 	avtest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -192,7 +192,7 @@ LOCAL_SRC_FILES:= \
 	bdaddr.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -218,7 +218,7 @@ LOCAL_SRC_FILES:= \
 	btiotest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 	$(call include-path-for, glib) \
 	$(call include-path-for, glib)\glib
@@ -253,7 +253,7 @@ LOCAL_SRC_FILES:= \
 	hciemu.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src \
 	$(call include-path-for, glib) \
 	$(call include-path-for, glib)\glib
@@ -287,7 +287,7 @@ LOCAL_SRC_FILES:= \
 	lmptest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \
@@ -312,7 +312,7 @@ LOCAL_SRC_FILES:= \
 	sdptest.c
 
 LOCAL_C_INCLUDES:= \
-	$(LOCAL_PATH)/../include \
+	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../src
 
 LOCAL_SHARED_LIBRARIES := \

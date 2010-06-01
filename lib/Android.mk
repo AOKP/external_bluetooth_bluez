@@ -6,8 +6,8 @@ LOCAL_SRC_FILES:= \
 	sdp.c \
 	hci.c
 
-LOCAL_C_INCLUDES+= \
-	 $(LOCAL_PATH)/../include/
+LOCAL_C_INCLUDES:= \
+        $(LOCAL_PATH)/bluetooth \
 
 LOCAL_MODULE:=libbluetooth
 
