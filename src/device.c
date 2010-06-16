@@ -1183,12 +1183,6 @@ void device_probe_drivers(struct btd_device *device, GSList *profiles)
 						g_strdup(list->data),
 						(GCompareFunc) strcasecmp);
 	}
-
-	if (device->tmp_records) {
-		sdp_list_free(device->tmp_records,
-				(sdp_free_func_t) sdp_record_free);
-		device->tmp_records = NULL;
-	}
 }
 
 static void device_remove_drivers(struct btd_device *device, GSList *uuids)
@@ -1390,12 +1384,12 @@ static void search_cb(sdp_list_t *recs, int err, gpointer user_data)
 
 	update_services(req, recs);
 
-	if (device->tmp_records && req->records) {
+	if (device->tmp_records)
 		sdp_list_free(device->tmp_records,
 					(sdp_free_func_t) sdp_record_free);
-		device->tmp_records = req->records;
-		req->records = NULL;
-	}
+
+	device->tmp_records = req->records;
+	req->records = NULL;
 
 	if (!req->profiles_added && !req->profiles_removed) {
 		debug("%s: No service update", device->path);
@@ -1422,7 +1416,7 @@ proceed:
 
 	if (dbus_message_is_method_call(req->msg, DEVICE_INTERFACE,
 					"DiscoverServices")) {
-		discover_services_reply(req, err, req->records);
+		discover_services_reply(req, err, device->tmp_records);
 		goto cleanup;
 	}
 
