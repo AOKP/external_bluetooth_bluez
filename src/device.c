@@ -2355,7 +2355,7 @@ int device_request_authentication(struct btd_device *device, auth_type_t type,
 		err = 0;
 		break;
 	case AUTH_TYPE_PAIRING_CONSENT:
-		ret = agent_request_pairing_consent(agent, device,
+		err = agent_request_pairing_consent(agent, device,
 							pairing_consent_cb, auth, NULL);
 		break;
 	default:

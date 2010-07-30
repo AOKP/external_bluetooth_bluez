@@ -16,7 +16,7 @@ LOCAL_SRC_FILES:= \
 	device.c \
 	error.c \
 	glib-helper.c \
-	logging.c \
+	log.c \
 	main.c \
 	manager.c \
 	oui.c \

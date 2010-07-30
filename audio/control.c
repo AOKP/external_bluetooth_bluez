@@ -866,7 +866,7 @@ int avrcp_register(DBusConnection *conn, const bdaddr_t *src, GKeyFile *config)
 		input_device_name = g_key_file_get_string(config,
 			"AVRCP", "InputDeviceName", &err);
 		if (err) {
-			debug("audio.conf: %s", err->message);
+			DBG("audio.conf: %s", err->message);
 			input_device_name = NULL;
 			g_error_free(err);
 		}

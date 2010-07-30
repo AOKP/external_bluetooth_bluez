@@ -397,12 +397,11 @@ int hcid_dbus_user_confirm(bdaddr_t *sba, bdaddr_t *dba, uint32_t passkey)
 	/* If local IO capabilities are DisplayYesNo and remote IO
 	 * capabiltiies are DisplayOnly or NoInputNoOutput;
 	 * call PairingConsent callback for incoming requests. */
-	struct agent *agent = NULL;
 	agent = device_get_agent(device);
 	if (!agent) {
 		agent = adapter_get_agent(adapter);
 		if ((agent_get_io_capability(agent) & 0x01) &&
-		            (remcap == 0x00 || remcap == 0x03))
+		            (rem_cap == 0x00 || rem_cap == 0x03))
 			return device_request_authentication(device,
 					AUTH_TYPE_PAIRING_CONSENT, 0,
 					pairing_consent_cb);

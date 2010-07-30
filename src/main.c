@@ -221,7 +221,7 @@ static void parse_config(GKeyFile *config)
 	if (err)
 		g_clear_error(&err);
 	else {
-		debug("default_link_policy=%s", str);
+		DBG("default_link_policy=%s", str);
 		main_opts.link_policy &= strtol(str, NULL, 16);
 	}
 }

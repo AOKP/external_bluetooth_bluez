@@ -734,7 +734,7 @@ int agent_request_pairing_consent(struct agent *agent, struct btd_device *device
 	if (agent->request)
 		return -EBUSY;
 
-	debug("Calling Agent.RequestPairingConsent: name=%s, path=%s",
+	DBG("Calling Agent.RequestPairingConsent: name=%s, path=%s",
 			agent->name, agent->path);
 
 	req = agent_request_new(agent, AGENT_REQUEST_PAIRING_CONSENT, cb,
