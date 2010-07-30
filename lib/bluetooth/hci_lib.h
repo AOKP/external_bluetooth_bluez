@@ -115,6 +115,19 @@ int hci_read_rssi(int dd, uint16_t handle, int8_t *rssi, int to);
 int hci_read_afh_map(int dd, uint16_t handle, uint8_t *mode, uint8_t *map, int to);
 int hci_read_clock(int dd, uint16_t handle, uint8_t which, uint32_t *clock, uint16_t *accuracy, int to);
 
+int hci_le_set_scan_enable(int dev_id, uint8_t enable, uint8_t filter_dup);
+int hci_le_set_scan_parameters(int dev_id, uint8_t type, uint16_t interval,
+					uint16_t window, uint8_t own_type,
+					uint8_t filter);
+int hci_le_set_advertise_enable(int dev_id, uint8_t enable);
+int hci_le_create_conn(int dd, uint16_t interval, uint16_t window,
+		uint8_t initiator_filter, uint8_t peer_bdaddr_type,
+		bdaddr_t peer_bdaddr, uint8_t own_bdaddr_type,
+		uint16_t min_interval, 	uint16_t max_interval,
+		uint16_t latency, uint16_t supervision_timeout,
+		uint16_t min_ce_length, uint16_t max_ce_length,
+		uint16_t *handle, int to);
+
 int hci_for_each_dev(int flag, int(*func)(int dd, int dev_id, long arg), long arg);
 int hci_get_route(bdaddr_t *bdaddr);
 

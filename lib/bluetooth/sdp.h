@@ -141,9 +141,9 @@ extern "C" {
 #define VIDEO_SOURCE_SVCLASS_ID		0x1303
 #define VIDEO_SINK_SVCLASS_ID		0x1304
 #define VIDEO_DISTRIBUTION_SVCLASS_ID	0x1305
-#define MDP_SVCLASS_ID			0x1400
-#define MDP_SOURCE_SVCLASS_ID		0x1401
-#define MDP_SINK_SVCLASS_ID		0x1402
+#define HDP_SVCLASS_ID			0x1400
+#define HDP_SOURCE_SVCLASS_ID		0x1401
+#define HDP_SINK_SVCLASS_ID		0x1402
 #define APPLE_AGENT_SVCLASS_ID		0x2112
 
 /*
@@ -213,10 +213,20 @@ extern "C" {
 #define VIDEO_SOURCE_PROFILE_ID		VIDEO_SOURCE_SVCLASS_ID
 #define VIDEO_SINK_PROFILE_ID		VIDEO_SINK_SVCLASS_ID
 #define VIDEO_DISTRIBUTION_PROFILE_ID	VIDEO_DISTRIBUTION_SVCLASS_ID
-#define MDP_PROFILE_ID			MDP_SVCLASS_ID
-#define MDP_SOURCE_PROFILE_ID		MDP_SROUCE_SVCLASS_ID
-#define MDP_SINK_PROFILE_ID		MDP_SINK_SVCLASS_ID
+#define HDP_PROFILE_ID			HDP_SVCLASS_ID
+#define HDP_SOURCE_PROFILE_ID		HDP_SOURCE_SVCLASS_ID
+#define HDP_SINK_PROFILE_ID		HDP_SINK_SVCLASS_ID
 #define APPLE_AGENT_PROFILE_ID		APPLE_AGENT_SVCLASS_ID
+
+/*
+ * Compatibility macros for the old MDP acronym
+ */
+#define MDP_SVCLASS_ID			HDP_SVCLASS_ID
+#define MDP_SOURCE_SVCLASS_ID		HDP_SOURCE_SVCLASS_ID
+#define MDP_SINK_SVCLASS_ID		HDP_SINK_SVCLASS_ID
+#define MDP_PROFILE_ID			HDP_PROFILE_ID
+#define MDP_SOURCE_PROFILE_ID		HDP_SOURCE_PROFILE_ID
+#define MDP_SINK_PROFILE_ID		HDP_SINK_PROFILE_ID
 
 /*
  * Attribute identifier codes
@@ -298,7 +308,7 @@ extern "C" {
 #define SDP_ATTR_HID_BOOT_DEVICE		0x020e
 
 /*
- * These identifiers are based on the SDP spec stating that 
+ * These identifiers are based on the SDP spec stating that
  * "base attribute id of the primary (universal) language must be 0x0100"
  *
  * Other languages should have their own offset; e.g.:
