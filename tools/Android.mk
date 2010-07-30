@@ -10,7 +10,7 @@ LOCAL_SRC_FILES:= \
 	avinfo.c
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.64\"
+	-DVERSION=\"4.69\"
 
 LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../lib \
@@ -35,7 +35,7 @@ LOCAL_SRC_FILES:= \
 	sdptool.c
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.64\" -fpermissive
+	-DVERSION=\"4.69\" -fpermissive
 
 LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../lib \
@@ -61,7 +61,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS:= \
 	-DSTORAGEDIR=\"/tmp\" \
-	-DVERSION=\"4.64\"
+	-DVERSION=\"4.69\"
 
 LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../lib \
@@ -87,7 +87,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_CFLAGS:= \
 	-DSTORAGEDIR=\"/tmp\" \
-	-DVERSION=\"4.64\"
+	-DVERSION=\"4.69\"
 
 LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../lib \
@@ -137,7 +137,7 @@ LOCAL_SRC_FILES:= \
 	hciattach_tialt.c
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.64\" \
+	-DVERSION=\"4.69\" \
 	-D__BSD_VISIBLE=1
 
 LOCAL_C_INCLUDES:=\
@@ -164,7 +164,7 @@ LOCAL_SRC_FILES:= \
         lexer.c
 
 LOCAL_CFLAGS:= \
-        -DVERSION=\"4.64\" \
+        -DVERSION=\"4.69\" \
 	-DCONFIGDIR=\"/etc/bluetooth\" \
         -DNEED_PPOLL
 

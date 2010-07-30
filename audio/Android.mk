@@ -21,7 +21,7 @@ LOCAL_SRC_FILES:= \
 	unix.c
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.64\" \
+	-DVERSION=\"4.69\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
 	-DCONFIGDIR=\"/etc/bluetooth\" \
 	-DANDROID \
