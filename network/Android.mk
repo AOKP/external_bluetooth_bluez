@@ -1,34 +1,37 @@
 LOCAL_PATH:= $(call my-dir)
 
-#
-# libplugin
-#
+# network plugin
 
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
-	hciops.c \
+	common.c \
+	connection.c \
+	main.c \
+	manager.c \
+	server.c
 
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.69\" \
-	-DBLUETOOTH_PLUGIN_BUILTIN \
+	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
+	-DCONFIGDIR=\"/etc/bluetooth\"
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../lib \
-        $(LOCAL_PATH)/../gdbus \
-        $(LOCAL_PATH)/../src \
-        $(call include-path-for, glib) \
-        $(call include-path-for, dbus) \
+	$(LOCAL_PATH)/../src \
+	$(LOCAL_PATH)/../gdbus \
+	$(call include-path-for, glib) \
+	$(call include-path-for, dbus)
 
 LOCAL_SHARED_LIBRARIES := \
 	libbluetoothd \
 	libbluetooth \
-	libcutils \
 	libdbus \
+	libcutils \
 	libglib \
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/bluez-plugin
 LOCAL_UNSTRIPPED_PATH := $(TARGET_OUT_SHARED_LIBRARIES_UNSTRIPPED)/bluez-plugin
-LOCAL_MODULE:=libbuiltinplugin
+LOCAL_MODULE := network
 
-include $(BUILD_STATIC_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)

@@ -37,7 +37,8 @@ LOCAL_C_INCLUDES:= \
 LOCAL_SHARED_LIBRARIES := \
 	libbluetooth \
 	libbluetoothd \
-	libdbus
+	libdbus \
+	libglib
 
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/bluez-plugin
