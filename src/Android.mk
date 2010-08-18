@@ -52,10 +52,10 @@ LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libbluetooth \
 	libdbus \
-	libcutils
+	libcutils \
+	libglib \
 
 LOCAL_STATIC_LIBRARIES := \
-	libglib_static \
 	libbuiltinplugin \
 	libgdbus_static
 
