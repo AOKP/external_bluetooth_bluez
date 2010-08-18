@@ -69,6 +69,7 @@ struct network_conn {
 	DBusMessage	*msg;
 	char		dev[16];	/* Interface name */
 	uint16_t	id;		/* Role: Service Class Identifier */
+	uint16_t	role;		/* Role: Service Class Identifier of device (phone) */
 	conn_state	state;
 	GIOChannel	*io;
 	guint		watch;		/* Disconnect watch */
@@ -283,7 +284,7 @@ static gboolean bnep_setup_cb(GIOChannel *chan, GIOCondition cond,
 
 	setsockopt(sk, SOL_SOCKET, SO_RCVTIMEO, &timeo, sizeof(timeo));
 
-	if (bnep_connadd(sk, BNEP_SVC_PANU, nc->dev)) {
+	if (bnep_connadd(sk, nc->role, nc->dev)) {
 		error("%s could not be added", nc->dev);
 		goto failed;
 	}
@@ -341,7 +342,7 @@ static int bnep_connect(struct network_conn *nc)
 	req->uuid_size = 2;	/* 16bit UUID */
 	s = (void *) req->service;
 	s->dst = htons(nc->id);
-	s->src = htons(BNEP_SVC_PANU);
+	s->src = htons(nc->role);
 
 	memset(&timeo, 0, sizeof(timeo));
 	timeo.tv_sec = 30;
@@ -385,26 +386,24 @@ failed:
 
 /* Connect and initiate BNEP session */
 static DBusMessage *connection_connect(DBusConnection *conn,
-						DBusMessage *msg, void *data)
+				DBusMessage *msg, void *data, char *src_svc, char *dst_svc)
 {
 	struct network_peer *peer = data;
 	struct network_conn *nc;
-	const char *svc;
-	uint16_t id;
+	uint16_t src_id;
+	uint16_t dst_id;
 	GError *err = NULL;
 
-	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &svc,
-						DBUS_TYPE_INVALID) == FALSE)
-		return NULL;
+	src_id = bnep_service_id(src_svc);
+	dst_id = bnep_service_id(dst_svc);
 
-	id = bnep_service_id(svc);
-	nc = find_connection(peer->connections, id);
+	nc = find_connection(peer->connections, dst_id);
 	if (!nc)
 		return not_supported(msg);
 
 	if (nc->state != DISCONNECTED)
 		return already_connected(msg);
-
+	nc->role = src_id;
 	nc->io = bt_io_connect(BT_IO_L2CAP, connect_cb, nc,
 				NULL, &err,
 				BT_IO_OPT_SOURCE_BDADDR, &peer->src,
@@ -428,6 +427,32 @@ static DBusMessage *connection_connect(DBusConnection *conn,
 						connection_destroy,
 						nc, NULL);
 
+	return NULL;
+}
+
+static DBusMessage *connection_connect_panu(DBusConnection *conn,
+						DBusMessage *msg, void *data)
+{
+	char *src_svc;
+	char *dst_svc;
+	src_svc = g_strdup("panu");
+	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &dst_svc,
+						DBUS_TYPE_INVALID) == FALSE)
+		return NULL;
+	connection_connect(conn, msg, data, src_svc, dst_svc);
+	return NULL;
+}
+
+static DBusMessage *connection_connect_generic(DBusConnection *conn,
+						DBusMessage *msg, void *data)
+{
+	char *src_svc;
+	char *dst_svc;
+	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &src_svc,
+						DBUS_TYPE_STRING, &dst_svc,
+						DBUS_TYPE_INVALID) == FALSE)
+		return NULL;
+	connection_connect(conn, msg, data, src_svc, dst_svc);
 	return NULL;
 }
 
@@ -546,7 +571,9 @@ static void path_unregister(void *data)
 }
 
 static GDBusMethodTable connection_methods[] = {
-	{ "Connect",		"s",	"s",	connection_connect,
+	{ "Connect",  "s", "s", connection_connect_panu,
+              G_DBUS_METHOD_FLAG_ASYNC },
+	{ "Connect", "ss",	"s", connection_connect_generic,
 						G_DBUS_METHOD_FLAG_ASYNC },
 	{ "Disconnect",		"",	"",	connection_disconnect	},
 	{ "GetProperties",	"",	"a{sv}",connection_get_properties },

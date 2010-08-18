@@ -28,6 +28,25 @@ Methods		string Connect(string uuid)
 			Possible errors: org.bluez.Error.AlreadyConnected
 					 org.bluez.Error.ConnectionAttemptFailed
 
+		string Connect(string src_uuid, string dst_uuid)
+
+			Connect to the network device and return the network
+			interface name. Examples of the interface name are
+			bnep0, bnep1 etc.
+
+			src_uuid is the uuid of this device, while dst_uuid is
+			the uuid of the device you are trying to connect to.
+			uuid can be either one of "gn", "panu" or "nap" (case
+			insensitive) or a traditional string representation of
+			UUID or a hexadecimal number.
+
+			The connection will be closed and network device
+			released either upon calling Disconnect() or when
+			the client disappears from the message bus.
+
+			Possible errors: org.bluez.Error.AlreadyConnected
+					 org.bluez.Error.ConnectionAttemptFailed
+
 		void Disconnect()
 
 			Disconnect from the network device.
