@@ -116,6 +116,21 @@ static struct network_server *find_server(GSList *list, uint16_t id)
 	return NULL;
 }
 
+static struct network_session *find_session(GSList *list, GIOChannel *chan)
+{
+	GSList *l;
+
+	for (l = list; l; l = l->next) {
+		struct network_session *session = l->data;
+
+		if (session->io == chan) {
+			return session;
+		}
+	}
+
+	return NULL;
+}
+
 static void add_lang_attr(sdp_record_t *r)
 {
 	sdp_lang_attr_t base_lang;
@@ -267,11 +282,38 @@ static ssize_t send_bnep_ctrl_rsp(int sk, uint16_t val)
 	return send(sk, &rsp, sizeof(rsp), 0);
 }
 
+static void bnep_watchdog_cb(GIOChannel *chan, GIOCondition cond,
+				gpointer data)
+{
+	struct network_server *ns = data;
+	struct network_session *session;
+	char address[18];
+	const char *paddr = address;
+
+	session = find_session(ns->sessions, chan);
+
+	if (!connection || !session) return;
+
+	ba2str(&session->dst, address);
+	g_dbus_emit_signal(connection, adapter_get_path(ns->na->adapter),
+				ns->iface, "DeviceDisconnected",
+				DBUS_TYPE_STRING, &paddr,
+				DBUS_TYPE_INVALID);
+
+	if (session->io) {
+		g_io_channel_unref(session->io);
+		session->io = NULL;
+	}
+}
+
+
 static int server_connadd(struct network_server *ns,
 				struct network_session *session,
 				uint16_t dst_role)
 {
 	char devname[16];
+	char address[18];
+	const char *paddr = address;
 	int err, nsk;
 
 	memset(devname, 0, sizeof(devname));
@@ -295,6 +337,16 @@ static int server_connadd(struct network_server *ns,
 	bnep_if_up(devname);
 
 	ns->sessions = g_slist_append(ns->sessions, session);
+
+	ba2str(&session->dst, address);
+	gboolean result = g_dbus_emit_signal(connection, adapter_get_path(ns->na->adapter),
+				ns->iface, "DeviceConnected",
+				DBUS_TYPE_STRING, &paddr,
+				DBUS_TYPE_UINT16, &dst_role,
+				DBUS_TYPE_INVALID);
+
+	g_io_add_watch(session->io, G_IO_ERR | G_IO_HUP | G_IO_NVAL,
+			(GIOFunc) bnep_watchdog_cb, ns);
 
 	return 0;
 }
@@ -716,6 +768,12 @@ static GDBusMethodTable server_methods[] = {
 	{ }
 };
 
+static GDBusSignalTable server_signals[] = {
+	{ "DeviceConnected",	"sq"    },
+	{ "DeviceDisconnected",	"s"      },
+	{ }
+};
+
 static struct network_adapter *create_adapter(struct btd_adapter *adapter)
 {
 	struct network_adapter *na;
@@ -772,7 +830,7 @@ int server_register(struct btd_adapter *adapter)
 	path = adapter_get_path(adapter);
 
 	if (!g_dbus_register_interface(connection, path, ns->iface,
-					server_methods, NULL, NULL,
+					server_methods, server_signals, NULL,
 					ns, path_unregister)) {
 		error("D-Bus failed to register %s interface",
 				ns->iface);
