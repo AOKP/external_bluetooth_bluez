@@ -14,7 +14,8 @@ LOCAL_SRC_FILES:= \
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.69\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
-	-DCONFIGDIR=\"/etc/bluetooth\"
+	-DCONFIGDIR=\"/etc/bluetooth\" \
+	-DANDROID_NO_BRIDGE \
 
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../btio \
