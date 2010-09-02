@@ -282,11 +282,13 @@ static int server_connadd(struct network_server *ns,
 
 	info("Added new connection: %s", devname);
 
+#ifndef ANDROID_NO_BRIDGE
 	if (bnep_add_to_bridge(devname, ns->bridge) < 0) {
 		error("Can't add %s to the bridge %s: %s(%d)",
 				devname, ns->bridge, strerror(errno), errno);
 		return -EPERM;
 	}
+#endif
 
 	bnep_if_up(devname);
 
