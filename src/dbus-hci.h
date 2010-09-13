@@ -34,8 +34,7 @@ void hcid_dbus_simple_pairing_complete(bdaddr_t *local, bdaddr_t *peer, uint8_t 
 void hcid_dbus_setscan_enable_complete(bdaddr_t *local);
 void hcid_dbus_write_simple_pairing_mode_complete(bdaddr_t *local);
 void hcid_dbus_returned_link_key(bdaddr_t *local, bdaddr_t *peer);
-int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
-						uint8_t *cap, uint8_t *auth);
+int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote);
 int hcid_dbus_set_io_cap(bdaddr_t *local, bdaddr_t *remote,
 						uint8_t cap, uint8_t auth);
 int hcid_dbus_user_confirm(bdaddr_t *sba, bdaddr_t *dba, uint32_t passkey);
@@ -44,6 +43,7 @@ int hcid_dbus_user_notify(bdaddr_t *sba, bdaddr_t *dba, uint32_t passkey);
 int hcid_dbus_link_key_notify(bdaddr_t *local, bdaddr_t *peer,
 				uint8_t *key, uint8_t key_type,
 				int pin_length, uint8_t old_key_type);
+int hcid_dbus_get_oob_data(bdaddr_t *sba, bdaddr_t *dba);
 
 gboolean get_adapter_and_device(bdaddr_t *src, bdaddr_t *dst,
 					struct btd_adapter **adapter,

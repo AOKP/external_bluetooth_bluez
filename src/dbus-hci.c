@@ -59,6 +59,12 @@
 #include "storage.h"
 #include "dbus-hci.h"
 
+struct oob_availability_req {
+        struct btd_device *device;
+        uint8_t auth;
+        uint8_t capa;
+};
+
 static DBusConnection *connection = NULL;
 
 gboolean get_adapter_and_device(bdaddr_t *src, bdaddr_t *dst,
@@ -286,6 +292,82 @@ static void passkey_cb(struct agent *agent, DBusError *err, uint32_t passkey,
 
 	hci_close_dev(dd);
 }
+
+static void oob_data_cb(struct  agent *agent, DBusError *err, uint8_t *hash,
+				uint8_t *randomizer, void *user_data)
+{
+	struct btd_device *device = user_data;
+	struct btd_adapter *adapter = device_get_adapter(device);
+	remote_oob_data_reply_cp cp;
+	bdaddr_t dba;
+	int dd;
+	uint16_t dev_id = adapter_get_dev_id(adapter);
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0) {
+		error("Unable to open hci%d", dev_id);
+		return;
+	}
+
+	device_get_address(device, &dba);
+	memset(&cp, 0, sizeof(cp));
+	bacpy(&cp.bdaddr, &dba);
+
+	memcpy(&cp.hash, hash, 16);
+	memcpy(&cp.randomizer, randomizer, 16);
+
+	if (err)
+                hci_send_cmd(dd, OGF_LINK_CTL, OCF_REMOTE_OOB_DATA_NEG_REPLY,
+                                6, &dba);
+
+	else
+                hci_send_cmd(dd, OGF_LINK_CTL, OCF_REMOTE_OOB_DATA_REPLY,
+                                REMOTE_OOB_DATA_REPLY_CP_SIZE, &cp);
+
+	hci_close_dev(dd);
+}
+
+static void io_capa_oob_response(struct btd_adapter *adapter, struct btd_device *device,
+					uint8_t cap, uint8_t auth, gboolean oob)
+{
+        io_capability_reply_cp cp;
+	int dd;
+	uint16_t dev_id = adapter_get_dev_id(adapter);
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0) {
+		error("Unable to open hci%d", dev_id);
+		return;
+	}
+	memset(&cp, 0, sizeof(cp));
+	device_get_address(device, &cp.bdaddr);
+
+	cp.capability = cap;
+	if (oob)
+		cp.oob_data = 0x01;
+	else
+		cp.oob_data = 0x00;
+	cp.authentication = auth;
+
+	hci_send_cmd(dd, OGF_LINK_CTL, OCF_IO_CAPABILITY_REPLY,
+			IO_CAPABILITY_REPLY_CP_SIZE, &cp);
+	hci_close_dev(dd);
+}
+
+static void oob_availability_cb(struct agent *agent, DBusError *err,
+					void *user_data)
+{
+	struct oob_availability_req *oob = user_data;
+	struct btd_device *device = oob->device;
+	struct btd_adapter *adapter = device_get_adapter(device);
+
+	if (err) {
+		io_capa_oob_response(adapter, device, oob->capa, oob->auth, FALSE);
+	} else {
+		io_capa_oob_response(adapter, device, oob->capa, oob->auth, TRUE);
+	}
+}
+
 
 static void pairing_consent_cb(struct agent *agent, DBusError *err,
 					void *user_data)
@@ -792,6 +874,25 @@ int hcid_dbus_link_key_notify(bdaddr_t *local, bdaddr_t *peer,
 	return 0;
 }
 
+int hcid_dbus_get_oob_data(bdaddr_t *sba, bdaddr_t * dba)
+{
+	struct btd_adapter *adapter;
+	struct btd_device *device;
+	struct agent *agent = NULL;
+
+        if (!get_adapter_and_device(sba, dba, &adapter, &device, TRUE))
+	        return -ENODEV;
+
+	agent = device_get_agent(device);
+	if (agent == NULL) {
+		error("No agent available for device");
+		return -1;
+	}
+
+	return device_request_authentication(device, AUTH_TYPE_OOB, 0,
+						oob_data_cb);
+}
+
 void hcid_dbus_conn_complete(bdaddr_t *local, uint8_t status, uint16_t handle,
 				bdaddr_t *peer)
 {
@@ -944,24 +1045,26 @@ void hcid_dbus_returned_link_key(bdaddr_t *local, bdaddr_t *peer)
 	device_set_paired(device, TRUE);
 }
 
-int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
-						uint8_t *cap, uint8_t *auth)
+int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote)
 {
 	struct btd_adapter *adapter;
 	struct btd_device *device;
+	struct oob_availability_req *oob_req;
 	struct agent *agent = NULL;
-	uint8_t agent_cap;
+	uint8_t agent_cap, auth, cap;
+	gboolean oob = FALSE;
+	int ret;
 
 	if (!get_adapter_and_device(local, remote, &adapter, &device, TRUE))
 		return -ENODEV;
 
-	if (get_auth_requirements(local, remote, auth) < 0)
+	if (get_auth_requirements(local, remote, &auth) < 0)
 		return -1;
 
-	DBG("initial authentication requirement is 0x%02x", *auth);
+	DBG("initial authentication requirement is 0x%02x", auth);
 
-	if (*auth == 0xff)
-		*auth = device_get_auth(device);
+	if (auth == 0xff)
+		auth = device_get_auth(device);
 
 	/* Check if the adapter is not pairable and if there isn't a bonding
 	 * in progress */
@@ -970,11 +1073,11 @@ int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
 		if (device_get_auth(device) < 0x02) {
 			DBG("Allowing no bonding in non-bondable mode");
 			/* No input, no output */
-			*cap = 0x03;
+			cap = 0x03;
 			/* Kernel defaults to general bonding and so
 			 * overwrite for this special case. Otherwise
 			 * non-pairable test cases will fail. */
-			*auth = 0x00;
+			auth = 0x00;
 			goto done;
 		}
 		return -EPERM;
@@ -990,13 +1093,13 @@ int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
 		}
 
 		/* No agent available, and no bonding case */
-		if (*auth == 0x00 || *auth == 0x04) {
+		if (auth == 0x00 || auth == 0x04) {
 			DBG("Allowing no bonding without agent");
 			/* No input, no output */
-			*cap = 0x03;
+			cap = 0x03;
 			/* If kernel defaults to general bonding, set it
 			 * back to no bonding */
-			*auth = 0x00;
+			auth = 0x00;
 			goto done;
 		}
 
@@ -1006,7 +1109,7 @@ int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
 
 	agent_cap = agent_get_io_capability(agent);
 
-	if (*auth == 0x00 || *auth == 0x04) {
+	if (auth == 0x00 || auth == 0x04) {
 		/* If remote requests dedicated bonding follow that lead */
 		if (device_get_auth(device) == 0x02 ||
 				device_get_auth(device) == 0x03) {
@@ -1015,9 +1118,9 @@ int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
 			 * then require it, otherwise don't */
 			if (device_get_cap(device) == 0x03 ||
 							agent_cap == 0x03)
-				*auth = 0x02;
+				auth = 0x02;
 			else
-				*auth = 0x03;
+				auth = 0x03;
 		}
 
 		/* If remote indicates no bonding then follow that. This
@@ -1025,7 +1128,7 @@ int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
 		 * as default. */
 		if (device_get_auth(device) == 0x00 ||
 					device_get_auth(device) == 0x01)
-			*auth = 0x00;
+			auth = 0x00;
 
 		/* If remote requires MITM then also require it, unless
 		 * our IO capability is NoInputNoOutput (so some
@@ -1033,14 +1136,32 @@ int hcid_dbus_get_io_cap(bdaddr_t *local, bdaddr_t *remote,
 		if (device_get_auth(device) != 0xff &&
 					(device_get_auth(device) & 0x01) &&
 					agent_cap != 0x03)
-			*auth |= 0x01;
+			auth |= 0x01;
 	}
 
-	*cap = agent_get_io_capability(agent);
+	DBG("final authentication requirement is 0x%02x", auth);
+	cap = agent_get_io_capability(agent);
+	oob = agent_get_oob_capability(agent);
+
+	// if pairing is not locally initiated
+	if (oob && agent == adapter_get_agent(adapter)) {
+		oob_req = g_new0(struct oob_availability_req, 1);
+		oob_req->device = device;
+		oob_req->auth = auth;
+		oob_req->capa = cap;
+
+		ret = device_request_oob_availability(device, oob_availability_cb,
+							oob_req);
+		if (ret < 0) {
+			g_free(oob_req);
+			oob = FALSE;
+			goto done;
+		}
+		return ret;
+	}
 
 done:
-	DBG("final authentication requirement is 0x%02x", *auth);
-
+	io_capa_oob_response(adapter, device, cap, auth, oob);
 	return 0;
 }
 

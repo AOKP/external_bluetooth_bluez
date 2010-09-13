@@ -1630,8 +1630,8 @@ static uint8_t parse_io_capability(const char *capability)
 	return IO_CAPABILITY_INVALID;
 }
 
-static DBusMessage *create_paired_device(DBusConnection *conn,
-					DBusMessage *msg, void *data)
+static DBusMessage *create_paired_device_generic(DBusConnection *conn,
+						DBusMessage *msg, void *data, const gboolean oob)
 {
 	struct btd_adapter *adapter = data;
 	struct btd_device *device;
@@ -1664,7 +1664,19 @@ static DBusMessage *create_paired_device(DBusConnection *conn,
 				ERROR_INTERFACE ".Failed",
 				"Unable to create a new device object");
 
-	return device_create_bonding(device, conn, msg, agent_path, cap);
+	return device_create_bonding(device, conn, msg, agent_path, cap, oob);
+}
+
+static DBusMessage *create_paired_device_oob(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	return create_paired_device_generic(conn, msg, data, TRUE);
+}
+
+static DBusMessage *create_paired_device(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	return create_paired_device_generic(conn, msg, data, FALSE);
 }
 
 static gint device_path_cmp(struct btd_device *device, const gchar *path)
@@ -1751,17 +1763,15 @@ static void agent_removed(struct agent *agent, struct btd_adapter *adapter)
 	adapter->agent = NULL;
 }
 
-static DBusMessage *register_agent(DBusConnection *conn, DBusMessage *msg,
-								void *data)
+
+static DBusMessage *register_agent_generic(DBusConnection *conn, DBusMessage *msg,
+					void *data, const char *path, const char *capability,
+					const gboolean oob)
 {
-	const char *path, *name, *capability;
+	const char *name;
 	struct agent *agent;
 	struct btd_adapter *adapter = data;
 	uint8_t cap;
-
-	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
-			DBUS_TYPE_STRING, &capability, DBUS_TYPE_INVALID))
-		return NULL;
 
 	if (adapter->agent)
 		return g_dbus_create_error(msg,
@@ -1774,7 +1784,7 @@ static DBusMessage *register_agent(DBusConnection *conn, DBusMessage *msg,
 
 	name = dbus_message_get_sender(msg);
 
-	agent = agent_create(adapter, name, path, cap,
+	agent = agent_create(adapter, name, path, cap, oob,
 				(agent_remove_cb) agent_removed, adapter);
 	if (!agent)
 		return g_dbus_create_error(msg,
@@ -1787,6 +1797,32 @@ static DBusMessage *register_agent(DBusConnection *conn, DBusMessage *msg,
 			path);
 
 	return dbus_message_new_method_return(msg);
+}
+
+static DBusMessage *register_agent_oob(DBusConnection *conn, DBusMessage *msg,
+					 void *data)
+{
+	const char *path, *capability;
+	gboolean oob;
+
+	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
+					DBUS_TYPE_STRING, &capability,
+					DBUS_TYPE_BOOLEAN, &oob, DBUS_TYPE_INVALID))
+		return NULL;
+
+	return register_agent_generic(conn, msg, data, path, capability, oob);
+}
+
+static DBusMessage *register_agent(DBusConnection *conn, DBusMessage *msg,
+					 void *data)
+{
+	const char *path, *capability;
+
+	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
+					DBUS_TYPE_STRING, &capability, DBUS_TYPE_INVALID))
+		return NULL;
+
+	return register_agent_generic(conn, msg, data, path, capability, FALSE);
 }
 
 static DBusMessage *unregister_agent(DBusConnection *conn, DBusMessage *msg,
@@ -1914,6 +1950,44 @@ static DBusMessage *remove_service_record(DBusConnection *conn,
 	return dbus_message_new_method_return(msg);
 }
 
+static DBusMessage *read_local_oob_data(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	struct btd_adapter *adapter = data;
+	DBusMessage *reply;
+
+	uint8_t hash[16], randomizer[16];
+	uint8_t *hash_ptr = hash;
+	uint8_t *r_ptr = randomizer;
+	int dd, err;
+
+	dd = hci_open_dev(adapter->dev_id);
+
+	if (dd < 0) {
+		err = -errno;
+		goto fail;
+	}
+
+	err = hci_read_local_oob_data(dd, hash, randomizer, HCI_REQ_TIMEOUT);
+
+	hci_close_dev(dd);
+
+	if (err < 0) {
+		err = -errno;
+		goto fail;
+	}
+
+	reply = dbus_message_new_method_return(msg);
+	dbus_message_append_args(reply,
+				DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &hash_ptr, 16,
+				DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &r_ptr, 16,
+				DBUS_TYPE_INVALID);
+
+	return reply;
+fail:
+	return failed_strerror(msg, errno);
+}
+
 static DBusMessage *set_link_timeout(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -1973,12 +2047,16 @@ static GDBusMethodTable adapter_methods[] = {
 						G_DBUS_METHOD_FLAG_ASYNC},
 	{ "CreatePairedDevice",	"sos",	"o",	create_paired_device,
 						G_DBUS_METHOD_FLAG_ASYNC},
+	{ "CreatePairedDeviceOutOfBand",	"sos",	"o",	create_paired_device_oob,
+						G_DBUS_METHOD_FLAG_ASYNC},
 	{ "CancelDeviceCreation","s",	"",	cancel_device_creation,
 						G_DBUS_METHOD_FLAG_ASYNC},
 	{ "RemoveDevice",	"o",	"",	remove_device,
 						G_DBUS_METHOD_FLAG_ASYNC},
 	{ "FindDevice",		"s",	"o",	find_device		},
+	{ "ReadLocalOutOfBandData", "", "ayay",	read_local_oob_data},
 	{ "RegisterAgent",	"os",	"",	register_agent		},
+	{ "RegisterAgent",	"osb",	"",	register_agent_oob	},
 	{ "UnregisterAgent",	"o",	"",	unregister_agent	},
 	{ "AddRfcommServiceRecord",	"sttq",	"u",	add_rfcomm_service_record },
 	{ "RemoveServiceRecord",	"u",	"",	remove_service_record },
