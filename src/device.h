@@ -31,6 +31,7 @@ typedef enum {
 	AUTH_TYPE_PASSKEY,
 	AUTH_TYPE_CONFIRM,
 	AUTH_TYPE_NOTIFY,
+	AUTH_TYPE_OOB,
 	AUTH_TYPE_AUTO,
 	AUTH_TYPE_PAIRING_CONSENT,
 } auth_type_t;
@@ -66,7 +67,8 @@ gboolean device_get_secmode3_conn(struct btd_device *device);
 void device_set_secmode3_conn(struct btd_device *device, gboolean enable);
 DBusMessage *device_create_bonding(struct btd_device *device,
 				DBusConnection *conn, DBusMessage *msg,
-				const char *agent_path, uint8_t capability);
+				const char *agent_path, uint8_t capability,
+				gboolean oob);
 void device_remove_bonding(struct btd_device *device);
 void device_bonding_complete(struct btd_device *device, uint8_t status);
 void device_simple_pairing_complete(struct btd_device *device, uint8_t status);
@@ -75,6 +77,8 @@ gboolean device_is_bonding(struct btd_device *device, const char *sender);
 void device_cancel_bonding(struct btd_device *device, uint8_t status);
 int device_request_authentication(struct btd_device *device, auth_type_t type,
 				uint32_t passkey, void *cb);
+int device_request_oob_availability(struct btd_device *device,
+				void *cb, void  *user_data);
 void device_cancel_authentication(struct btd_device *device, gboolean aborted);
 gboolean device_is_authenticating(struct btd_device *device);
 gboolean device_is_authorizing(struct btd_device *device);

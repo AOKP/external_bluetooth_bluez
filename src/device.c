@@ -1918,7 +1918,8 @@ static struct bonding_req *bonding_request_new(DBusConnection *conn,
 						DBusMessage *msg,
 						struct btd_device *device,
 						const char *agent_path,
-						uint8_t capability)
+						uint8_t capability,
+						gboolean oob)
 {
 	struct bonding_req *bonding;
 	const char *name = dbus_message_get_sender(msg);
@@ -1931,6 +1932,7 @@ static struct bonding_req *bonding_request_new(DBusConnection *conn,
 
 	agent = agent_create(device->adapter, name, agent_path,
 					capability,
+					oob,
 					device_agent_removed,
 					device);
 	if (!agent) {
@@ -2057,7 +2059,8 @@ DBusMessage *device_create_bonding(struct btd_device *device,
 					DBusConnection *conn,
 					DBusMessage *msg,
 					const char *agent_path,
-					uint8_t capability)
+					uint8_t capability,
+					gboolean oob)
 {
 	char filename[PATH_MAX + 1];
 	char *str, srcaddr[18], dstaddr[18];
@@ -2112,7 +2115,7 @@ DBusMessage *device_create_bonding(struct btd_device *device,
 	}
 
 	bonding = bonding_request_new(conn, msg, device, agent_path,
-					capability);
+					capability, oob);
 	if (!bonding) {
 		g_io_channel_shutdown(io, TRUE, NULL);
 		return NULL;
@@ -2283,6 +2286,22 @@ static void confirm_cb(struct agent *agent, DBusError *err, void *data)
 	device->authr->agent = NULL;
 }
 
+static void oob_data_cb(struct agent *agent, DBusError *err,
+				uint8_t *hash, uint8_t *randomizer, void *data)
+{
+	struct authentication_req *auth = data;
+	struct btd_device *device = auth->device;
+
+	/* No need to reply anything if the authentication already failed */
+	if (auth->cb == NULL)
+		return;
+
+	((agent_oob_data_cb) auth->cb)(agent, err, hash, randomizer, device);
+
+	device->authr->cb = NULL;
+	device->authr->agent = NULL;
+}
+
 static void passkey_cb(struct agent *agent, DBusError *err,
 						uint32_t passkey, void *data)
 {
@@ -2312,6 +2331,30 @@ static void pairing_consent_cb(struct agent *agent, DBusError *err, void *data)
 
 	auth->cb = NULL;
 }
+
+int device_request_oob_availability(struct btd_device *device,
+						void *cb, void *user_data)
+{
+	struct agent *agent;
+	int err;
+
+	DBG("%s: requesting agent oob availability", device->path);
+
+	agent = device_get_agent(device);
+	if (!agent) {
+		error("No agent available for OOB request");
+		return -EPERM;
+	}
+
+	err = agent_request_oob_availability(agent, device_get_path(device),
+						cb, user_data, g_free);
+
+	if (err < 0) {
+		error("Failed requesting oob availability");
+	}
+	return err;
+}
+
 
 int device_request_authentication(struct btd_device *device, auth_type_t type,
 						uint32_t passkey, void *cb)
@@ -2350,6 +2393,9 @@ int device_request_authentication(struct btd_device *device, auth_type_t type,
 		break;
 	case AUTH_TYPE_NOTIFY:
 		err = agent_display_passkey(agent, device, passkey);
+		break;
+	case AUTH_TYPE_OOB:
+		err = agent_request_oob_data(agent, device, oob_data_cb, auth, NULL);
 		break;
 	case AUTH_TYPE_AUTO:
 		err = 0;
@@ -2395,6 +2441,9 @@ static void cancel_authentication(struct authentication_req *auth)
 		break;
 	case AUTH_TYPE_PASSKEY:
 		((agent_passkey_cb) auth->cb)(agent, &err, 0, device);
+		break;
+	case AUTH_TYPE_OOB:
+		((agent_oob_data_cb) auth->cb)(agent, &err, 0, 0, device);
 		break;
 	case AUTH_TYPE_PAIRING_CONSENT:
 		((agent_cb) auth->cb) (agent, &err, device);
