@@ -1749,12 +1749,11 @@ static int add_opush(sdp_session_t *session, svc_info_t *si)
 	sdp_record_t record;
 	uint8_t chan = si->channel ? si->channel : 9;
 	sdp_data_t *channel;
-<<<<<<< HEAD
+#ifdef ANDROID
+	uint8_t formats[] = { 0x01, 0x02, 0xff };
+#else
 	uint8_t formats[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xff };
-=======
-	uint8_t formats[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
-	//uint8_t formats[] = { 0xff };
->>>>>>> Revert "Set OPUSH SDP record supported format list to 0xff (any object type)."
+#endif
 	void *dtds[sizeof(formats)], *values[sizeof(formats)];
 	unsigned int i;
 	uint8_t dtd = SDP_UINT8;
