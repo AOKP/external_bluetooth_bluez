@@ -312,6 +312,7 @@ static int server_connadd(struct network_server *ns,
 	char devname[16];
 	char address[18];
 	const char *paddr = address;
+	const char *pdevname = devname;
 	int err, nsk;
 
 	memset(devname, 0, sizeof(devname));
@@ -340,6 +341,7 @@ static int server_connadd(struct network_server *ns,
 	gboolean result = g_dbus_emit_signal(connection, adapter_get_path(ns->na->adapter),
 				ns->iface, "DeviceConnected",
 				DBUS_TYPE_STRING, &paddr,
+				DBUS_TYPE_STRING, &pdevname,
 				DBUS_TYPE_UINT16, &dst_role,
 				DBUS_TYPE_INVALID);
 
@@ -753,7 +755,7 @@ static GDBusMethodTable server_methods[] = {
 };
 
 static GDBusSignalTable server_signals[] = {
-	{ "DeviceConnected",	"sq"    },
+	{ "DeviceConnected",	"ssq"    },
 	{ "DeviceDisconnected",	"s"      },
 	{ }
 };
