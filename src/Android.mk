@@ -39,6 +39,11 @@ LOCAL_CFLAGS:= \
 	-DANDROID_EXPAND_NAME \
 	-DOUIFILE=\"/data/misc/bluetoothd/ouifile\" \
 
+ifeq ($(BOARD_HAVE_BLUETOOTH_BCM),true)
+LOCAL_CFLAGS += \
+	-DBOARD_HAVE_BLUETOOTH_BCM
+endif
+
 LOCAL_C_INCLUDES:= \
 	$(LOCAL_PATH)/../btio \
 	$(LOCAL_PATH)/../lib \
