@@ -299,11 +299,9 @@ static void bnep_watchdog_cb(GIOChannel *chan, GIOCondition cond,
 				ns->iface, "DeviceDisconnected",
 				DBUS_TYPE_STRING, &paddr,
 				DBUS_TYPE_INVALID);
-
-	if (session->io) {
-		g_io_channel_unref(session->io);
-		session->io = NULL;
-	}
+	g_io_channel_shutdown(chan, TRUE, NULL);
+	g_io_channel_unref(session->io);
+	session->io = NULL;
 }
 
 
@@ -347,7 +345,7 @@ static int server_connadd(struct network_server *ns,
 				DBUS_TYPE_UINT16, &dst_role,
 				DBUS_TYPE_INVALID);
 
-	g_io_add_watch(session->io, G_IO_ERR | G_IO_HUP | G_IO_NVAL,
+	g_io_add_watch(session->io, G_IO_ERR | G_IO_HUP,
 			(GIOFunc) bnep_watchdog_cb, ns);
 
 	return 0;
