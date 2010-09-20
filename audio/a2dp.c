@@ -990,6 +990,9 @@ static sdp_record_t *a2dp_record(uint8_t type, uint16_t avdtp_ver)
 	uint16_t lp = AVDTP_UUID;
 	uint16_t a2dp_ver = 0x0102, feat = 0x000f;
 
+#ifdef ANDROID
+	feat = 0x0001;
+#endif
 	record = sdp_record_alloc();
 	if (!record)
 		return NULL;
