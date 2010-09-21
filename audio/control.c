@@ -373,6 +373,15 @@ static void handle_panel_passthrough(struct control *control,
 		pressed = 1;
 	}
 
+#ifdef ANDROID
+	if ((operands[0] & 0x7F) == PAUSE_OP) {
+		if (!sink_is_streaming(control->dev)) {
+			DBG("AVRCP: Ignoring Pause key");
+			return;
+		}
+	}
+#endif
+
 	for (i = 0; key_map[i].name != NULL; i++) {
 		uint8_t key_quirks;
 
