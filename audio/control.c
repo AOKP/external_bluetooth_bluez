@@ -277,6 +277,9 @@ static sdp_record_t *avrcp_tg_record()
 	uint16_t lp = AVCTP_PSM;
 	uint16_t avrcp_ver = 0x0100, avctp_ver = 0x0103, feat = 0x000f;
 
+#ifdef ANDROID
+	feat = 0x0001;
+#endif
 	record = sdp_record_alloc();
 	if (!record)
 		return NULL;
