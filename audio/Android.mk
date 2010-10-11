@@ -60,9 +60,17 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= \
 	liba2dp.c \
 	ipc.c \
-	../sbc/sbc.c.arm \
 	../sbc/sbc_primitives.c \
 	../sbc/sbc_primitives_neon.c
+
+ifeq ($(TARGET_ARCH),x86)
+LOCAL_SRC_FILES+= \
+    ../sbc/sbc_primitives_mmx.c \
+    ../sbc/sbc.c
+else
+LOCAL_SRC_FILES+= \
+    ../sbc/sbc.c.arm
+endif
 
 # to improve SBC performance
 LOCAL_CFLAGS:= -funroll-loops
