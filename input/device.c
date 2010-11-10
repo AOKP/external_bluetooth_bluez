@@ -374,6 +374,7 @@ static gboolean rfcomm_connect(struct input_conn *iconn, GError **err)
 				NULL, err,
 				BT_IO_OPT_SOURCE_BDADDR, &idev->src,
 				BT_IO_OPT_DEST_BDADDR, &idev->dst,
+				BT_IO_OPT_POWER_ACTIVE, 0,
 				BT_IO_OPT_INVALID);
 	if (!io)
 		return FALSE;
@@ -868,6 +869,7 @@ static void control_connect_cb(GIOChannel *chan, GError *conn_err,
 				BT_IO_OPT_DEST_BDADDR, &idev->dst,
 				BT_IO_OPT_PSM, L2CAP_PSM_HIDP_INTR,
 				BT_IO_OPT_SEC_LEVEL, BT_IO_SEC_LOW,
+				BT_IO_OPT_POWER_ACTIVE, 0,
 				BT_IO_OPT_INVALID);
 	if (!io) {
 		error("%s", err->message);
@@ -948,6 +950,7 @@ static DBusMessage *input_device_connect(DBusConnection *conn,
 					BT_IO_OPT_DEST_BDADDR, &idev->dst,
 					BT_IO_OPT_PSM, L2CAP_PSM_HIDP_CTRL,
 					BT_IO_OPT_SEC_LEVEL, BT_IO_SEC_LOW,
+					BT_IO_OPT_POWER_ACTIVE, 0,
 					BT_IO_OPT_INVALID);
 		iconn->ctrl_io = io;
 	}

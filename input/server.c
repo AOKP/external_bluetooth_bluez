@@ -188,6 +188,7 @@ int server_start(const bdaddr_t *src)
 				BT_IO_OPT_SOURCE_BDADDR, src,
 				BT_IO_OPT_PSM, L2CAP_PSM_HIDP_CTRL,
 				BT_IO_OPT_SEC_LEVEL, BT_IO_SEC_LOW,
+				BT_IO_OPT_POWER_ACTIVE, 0,
 				BT_IO_OPT_INVALID);
 	if (!server->ctrl) {
 		error("Failed to listen on control channel");
@@ -201,6 +202,7 @@ int server_start(const bdaddr_t *src)
 				BT_IO_OPT_SOURCE_BDADDR, src,
 				BT_IO_OPT_PSM, L2CAP_PSM_HIDP_INTR,
 				BT_IO_OPT_SEC_LEVEL, BT_IO_SEC_LOW,
+				BT_IO_OPT_POWER_ACTIVE, 0,
 				BT_IO_OPT_INVALID);
 	if (!server->intr) {
 		error("Failed to listen on interrupt channel");
