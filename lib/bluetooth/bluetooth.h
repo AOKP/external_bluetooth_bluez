@@ -70,6 +70,11 @@ struct bt_security {
 
 #define BT_DEFER_SETUP	7
 
+#define BT_POWER	8
+struct bt_power {
+	uint8_t force_active;
+};
+
 /* Connection and socket states */
 enum {
 	BT_CONNECTED = 1, /* Equal to TCP_ESTABLISHED to make net code happy */

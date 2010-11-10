@@ -61,6 +61,7 @@ typedef enum {
 	BT_IO_OPT_HANDLE,
 	BT_IO_OPT_CLASS,
 	BT_IO_OPT_MODE,
+	BT_IO_OPT_POWER_ACTIVE,
 } BtIOOption;
 
 typedef enum {

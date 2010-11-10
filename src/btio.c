@@ -58,6 +58,7 @@ struct set_opts {
 	uint16_t omtu;
 	int master;
 	uint8_t mode;
+	uint8_t force_active;
 };
 
 struct connect {
@@ -364,6 +365,26 @@ static int rfcomm_set_lm(int sock, int level)
 	return 0;
 }
 
+static gboolean set_force_active(int sock, BtIOType type, uint8_t force_active,
+					GError **err)
+{
+	struct bt_power pwr;
+
+	memset(&pwr, 0, sizeof(struct bt_power));
+	pwr.force_active = force_active;
+
+	if (setsockopt(sock, SOL_BLUETOOTH, BT_POWER, &pwr,
+							sizeof(pwr)) == 0)
+		return TRUE;
+
+	if (errno != ENOPROTOOPT) {
+		ERROR_FAILED(err, "setsockopt(BT_POWER)", errno);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 static gboolean set_sec_level(int sock, BtIOType type, int level, GError **err)
 {
 	struct bt_security sec;
@@ -443,6 +464,27 @@ static int rfcomm_get_lm(int sock, int *sec_level)
 	return 0;
 }
 
+static gboolean get_force_active(int sock, BtIOType type, uint8_t *force_active,
+							GError **err)
+{
+	struct bt_power pwr;
+	socklen_t len;
+
+	memset(&pwr, 0, sizeof(pwr));
+	len = sizeof(pwr);
+	if (getsockopt(sock, SOL_BLUETOOTH, BT_POWER, &pwr, &len) == 0) {
+		*force_active = pwr.force_active;
+		return TRUE;
+	}
+
+	if (errno != ENOPROTOOPT) {
+		ERROR_FAILED(err, "getsockopt(BT_POWER)", errno);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 static gboolean get_sec_level(int sock, BtIOType type, int *level,
 								GError **err)
 {
@@ -476,7 +518,8 @@ static gboolean get_sec_level(int sock, BtIOType type, int *level,
 }
 
 static gboolean l2cap_set(int sock, int sec_level, uint16_t imtu, uint16_t omtu,
-					uint8_t mode, int master, GError **err)
+					uint8_t mode, int master, uint8_t force_active,
+					GError **err)
 {
 	if (imtu || omtu || mode) {
 		struct l2cap_options l2o;
@@ -510,6 +553,9 @@ static gboolean l2cap_set(int sock, int sec_level, uint16_t imtu, uint16_t omtu,
 	}
 
 	if (sec_level && !set_sec_level(sock, BT_IO_L2CAP, sec_level, err))
+		return FALSE;
+
+	if (!set_force_active(sock, BT_IO_L2CAP, force_active, err))
 		return FALSE;
 
 	return TRUE;
@@ -550,9 +596,13 @@ static int rfcomm_connect(int sock, const bdaddr_t *dst, uint8_t channel)
 	return 0;
 }
 
-static gboolean rfcomm_set(int sock, int sec_level, int master, GError **err)
+static gboolean rfcomm_set(int sock, int sec_level, int master,
+				uint8_t force_active, GError **err)
 {
 	if (sec_level && !set_sec_level(sock, BT_IO_RFCOMM, sec_level, err))
+		return FALSE;
+
+	if (!set_force_active(sock, BT_IO_RFCOMM, force_active, err))
 		return FALSE;
 
 	if (master >= 0 && rfcomm_set_master(sock, master) < 0) {
@@ -633,6 +683,7 @@ static gboolean parse_set_opts(struct set_opts *opts, GError **err,
 	opts->master = -1;
 	opts->sec_level = BT_IO_SEC_MEDIUM;
 	opts->mode = L2CAP_MODE_BASIC;
+	opts->force_active = 1;
 
 	while (opt != BT_IO_OPT_INVALID) {
 		switch (opt) {
@@ -684,6 +735,9 @@ static gboolean parse_set_opts(struct set_opts *opts, GError **err,
 			break;
 		case BT_IO_OPT_MODE:
 			opts->mode = va_arg(args, int);
+			break;
+		case BT_IO_OPT_POWER_ACTIVE:
+			opts->force_active = va_arg(args, int);
 			break;
 		default:
 			g_set_error(err, BT_IO_ERROR, BT_IO_ERROR_INVALID_ARGS,
@@ -822,6 +876,11 @@ static gboolean l2cap_get(int sock, GError **err, BtIOOption opt1,
 			}
 			memcpy(va_arg(args, uint8_t *), dev_class, 3);
 			break;
+		case BT_IO_OPT_POWER_ACTIVE:
+			if (!get_force_active(sock, BT_IO_L2CAP,
+						va_arg(args, uint8_t *), err))
+				return FALSE;
+			break;
 		default:
 			g_set_error(err, BT_IO_ERROR, BT_IO_ERROR_INVALID_ARGS,
 					"Unknown option %d", opt);
@@ -928,6 +987,11 @@ static gboolean rfcomm_get(int sock, GError **err, BtIOOption opt1,
 				return FALSE;
 			}
 			memcpy(va_arg(args, uint8_t *), dev_class, 3);
+			break;
+		case BT_IO_OPT_POWER_ACTIVE:
+			if (!get_force_active(sock, BT_IO_RFCOMM,
+						va_arg(args, uint8_t *), err))
+				return FALSE;
 			break;
 		default:
 			g_set_error(err, BT_IO_ERROR, BT_IO_ERROR_INVALID_ARGS,
@@ -1095,9 +1159,11 @@ gboolean bt_io_set(GIOChannel *io, BtIOType type, GError **err,
 	case BT_IO_L2RAW:
 	case BT_IO_L2CAP:
 		return l2cap_set(sock, opts.sec_level, opts.imtu, opts.omtu,
-						opts.mode, opts.master, err);
+						opts.mode, opts.master, opts.force_active,
+						err);
 	case BT_IO_RFCOMM:
-		return rfcomm_set(sock, opts.sec_level, opts.master, err);
+		return rfcomm_set(sock, opts.sec_level, opts.master, opts.force_active,
+				err);
 	case BT_IO_SCO:
 		return sco_set(sock, opts.mtu, err);
 	}
@@ -1136,7 +1202,8 @@ static GIOChannel *create_io(BtIOType type, gboolean server,
 		if (l2cap_bind(sock, &opts->src,
 					server ? opts->psm : 0, err) < 0)
 			goto failed;
-		if (!l2cap_set(sock, opts->sec_level, 0, 0, 0, -1, err))
+		if (!l2cap_set(sock, opts->sec_level, 0, 0, 0, -1, opts->force_active,
+					err))
 			goto failed;
 		break;
 	case BT_IO_L2CAP:
@@ -1149,7 +1216,8 @@ static GIOChannel *create_io(BtIOType type, gboolean server,
 					server ? opts->psm : 0, err) < 0)
 			goto failed;
 		if (!l2cap_set(sock, opts->sec_level, opts->imtu, opts->omtu,
-						opts->mode, opts->master, err))
+						opts->mode, opts->master,
+						opts->force_active, err))
 			goto failed;
 		break;
 	case BT_IO_RFCOMM:
@@ -1161,7 +1229,8 @@ static GIOChannel *create_io(BtIOType type, gboolean server,
 		if (rfcomm_bind(sock, &opts->src,
 					server ? opts->channel : 0, err) < 0)
 			goto failed;
-		if (!rfcomm_set(sock, opts->sec_level, opts->master, err))
+		if (!rfcomm_set(sock, opts->sec_level, opts->master,
+					opts->force_active, err))
 			goto failed;
 		break;
 	case BT_IO_SCO:
