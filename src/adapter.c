@@ -834,8 +834,7 @@ static void update_ext_inquiry_response(struct btd_adapter *adapter)
 		return;
 
 	if (dev->ssp_mode > 0)
-		create_ext_inquiry_response((char *) dev->name,
-						adapter->tx_power,
+		create_ext_inquiry_response(dev->name, adapter->tx_power,
 						adapter->services, data);
 
 	if (hci_write_ext_inquiry_response(dd, fec, data,
@@ -937,16 +936,16 @@ void adapter_update_local_name(bdaddr_t *bdaddr, uint8_t status, void *ptr)
 	dev = &adapter->dev;
 
 	memcpy(&rp, ptr, MAX_NAME_LENGTH);
-	if (strncmp((char *) rp.name, (char *) dev->name, MAX_NAME_LENGTH) == 0)
+	if (strncmp((char *) rp.name, dev->name, MAX_NAME_LENGTH) == 0)
 		return;
 
-	strncpy((char *) dev->name, (char *) rp.name, MAX_NAME_LENGTH);
+	strncpy(dev->name, (char *) rp.name, MAX_NAME_LENGTH);
 
-	write_local_name(bdaddr, (char *) dev->name);
+	write_local_name(bdaddr, dev->name);
 
 	update_ext_inquiry_response(adapter);
 
-	name = g_strdup((char *) dev->name);
+	name = g_strdup(dev->name);
 
 	if (connection)
 		emit_property_changed(connection, adapter->path,
@@ -987,11 +986,11 @@ static DBusMessage *set_name(DBusConnection *conn, DBusMessage *msg,
 		return invalid_args(msg);
 	}
 
-	if (strncmp(name, (char *) dev->name, MAX_NAME_LENGTH) == 0)
+	if (strncmp(name, dev->name, MAX_NAME_LENGTH) == 0)
 		goto done;
 
 	if (!adapter->up) {
-		strncpy((char *) adapter->dev.name, name, MAX_NAME_LENGTH);
+		strncpy(dev->name, name, MAX_NAME_LENGTH);
 		write_local_name(&adapter->bdaddr, name);
 	} else {
 		int err = adapter_ops->set_name(adapter->dev_id, name);
