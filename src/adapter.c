@@ -2008,6 +2008,343 @@ static DBusMessage *remove_service_record(DBusConnection *conn,
 	return dbus_message_new_method_return(msg);
 }
 
+static int add_headset_ag_record(struct btd_adapter* adapter)
+{
+	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
+	uuid_t root_uuid, svclass_uuid, ga_svclass_uuid, l2cap_uuid, rfcomm_uuid;
+	sdp_profile_desc_t profile;
+	sdp_list_t *aproto, *proto[2];
+	sdp_record_t *record;
+	uint8_t u8 = 11;
+	sdp_data_t *channel;
+	uint8_t netid = 0x01; // ???? profile document
+	sdp_data_t *network = sdp_data_alloc(SDP_UINT8, &netid);
+	int ret = 0;
+
+	record = sdp_record_alloc();
+	if (!record) return -1;
+
+	sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+	root = sdp_list_append(0, &root_uuid);
+	sdp_set_browse_groups(record, root);
+
+	sdp_uuid16_create(&svclass_uuid, HEADSET_AGW_SVCLASS_ID);
+	svclass_id = sdp_list_append(0, &svclass_uuid);
+	sdp_uuid16_create(&ga_svclass_uuid, GENERIC_AUDIO_SVCLASS_ID);
+	svclass_id = sdp_list_append(svclass_id, &ga_svclass_uuid);
+	sdp_set_service_classes(record, svclass_id);
+
+	sdp_uuid16_create(&profile.uuid, HEADSET_PROFILE_ID);
+	profile.version = 0x0100;
+	pfseq = sdp_list_append(0, &profile);
+	sdp_set_profile_descs(record, pfseq);
+
+	sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+	proto[0] = sdp_list_append(0, &l2cap_uuid);
+	apseq = sdp_list_append(0, proto[0]);
+
+	sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+	proto[1] = sdp_list_append(0, &rfcomm_uuid);
+	channel = sdp_data_alloc(SDP_UINT8, &u8);
+	proto[1] = sdp_list_append(proto[1], channel);
+	apseq = sdp_list_append(apseq, proto[1]);
+
+	aproto = sdp_list_append(0, apseq);
+	sdp_set_access_protos(record, aproto);
+
+	sdp_set_info_attr(record, "Voice Gateway", 0, 0);
+
+	sdp_attr_add(record, SDP_ATTR_EXTERNAL_NETWORK, network);
+
+	if (add_record_to_server(&adapter->bdaddr, record) < 0)
+		ret = -1;
+
+	sdp_data_free(channel);
+	sdp_list_free(proto[0], 0);
+	sdp_list_free(proto[1], 0);
+	sdp_list_free(apseq, 0);
+	sdp_list_free(aproto, 0);
+
+	if (!ret)
+		return record->handle;
+	return ret;
+}
+
+static int add_handsfree_ag_record(struct btd_adapter* adapter) {
+	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
+	uuid_t root_uuid, svclass_uuid, ga_svclass_uuid, l2cap_uuid, rfcomm_uuid;
+	sdp_profile_desc_t profile;
+	sdp_list_t *aproto, *proto[2];
+	sdp_record_t *record;
+	uint8_t u8 = 10;
+	uint16_t u16 = 0x17;
+#ifdef ANDROID
+	u16 = 0x07;
+#endif
+	sdp_data_t *channel, *features;
+	uint8_t netid = 0x01; // ???? profile document
+	sdp_data_t *network = sdp_data_alloc(SDP_UINT8, &netid);
+	int ret = 0;
+
+	record = sdp_record_alloc();
+	if (!record) return -1;
+
+	sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+	root = sdp_list_append(0, &root_uuid);
+	sdp_set_browse_groups(record, root);
+
+	sdp_uuid16_create(&svclass_uuid, HANDSFREE_AGW_SVCLASS_ID);
+	svclass_id = sdp_list_append(0, &svclass_uuid);
+	sdp_uuid16_create(&ga_svclass_uuid, GENERIC_AUDIO_SVCLASS_ID);
+	svclass_id = sdp_list_append(svclass_id, &ga_svclass_uuid);
+	sdp_set_service_classes(record, svclass_id);
+
+	sdp_uuid16_create(&profile.uuid, HANDSFREE_PROFILE_ID);
+	profile.version = 0x0105;
+	pfseq = sdp_list_append(0, &profile);
+	sdp_set_profile_descs(record, pfseq);
+
+	sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+	proto[0] = sdp_list_append(0, &l2cap_uuid);
+	apseq = sdp_list_append(0, proto[0]);
+
+	sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+	proto[1] = sdp_list_append(0, &rfcomm_uuid);
+	channel = sdp_data_alloc(SDP_UINT8, &u8);
+	proto[1] = sdp_list_append(proto[1], channel);
+	apseq = sdp_list_append(apseq, proto[1]);
+
+	features = sdp_data_alloc(SDP_UINT16, &u16);
+	sdp_attr_add(record, SDP_ATTR_SUPPORTED_FEATURES, features);
+
+	aproto = sdp_list_append(0, apseq);
+	sdp_set_access_protos(record, aproto);
+
+	sdp_set_info_attr(record, "Voice Gateway", 0, 0);
+
+	sdp_attr_add(record, SDP_ATTR_EXTERNAL_NETWORK, network);
+
+	if (add_record_to_server(&adapter->bdaddr, record) < 0)
+		ret = -1;
+
+	sdp_data_free(channel);
+	sdp_list_free(proto[0], 0);
+	sdp_list_free(proto[1], 0);
+	sdp_list_free(apseq, 0);
+        sdp_list_free(aproto, 0);
+
+	if (!ret)
+		return record->handle;
+	return ret;
+}
+
+static int add_pbap_pse_record(struct btd_adapter *adapter)
+{
+	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
+	uuid_t root_uuid, pbap_uuid, l2cap_uuid, rfcomm_uuid, obex_uuid;
+	sdp_profile_desc_t profile[1];
+	sdp_list_t *aproto, *proto[3];
+	sdp_record_t *record;
+	uint8_t u8 = 19;
+	sdp_data_t *channel;
+	uint8_t formats[] = {0x01};
+	uint8_t dtd = SDP_UINT8;
+	sdp_data_t *sflist;
+	int ret = 0;
+
+	record = sdp_record_alloc();
+	if (!record) return -1;
+
+	sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+	root = sdp_list_append(0, &root_uuid);
+	sdp_set_browse_groups(record, root);
+
+	sdp_uuid16_create(&pbap_uuid, PBAP_PSE_SVCLASS_ID);
+	svclass_id = sdp_list_append(0, &pbap_uuid);
+	sdp_set_service_classes(record, svclass_id);
+
+	sdp_uuid16_create(&profile[0].uuid, PBAP_PROFILE_ID);
+	profile[0].version = 0x0100;
+	pfseq = sdp_list_append(0, profile);
+	sdp_set_profile_descs(record, pfseq);
+
+	sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+	proto[0] = sdp_list_append(0, &l2cap_uuid);
+	apseq = sdp_list_append(0, proto[0]);
+
+	sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+	proto[1] = sdp_list_append(0, &rfcomm_uuid);
+	channel = sdp_data_alloc(SDP_UINT8, &u8);
+	proto[1] = sdp_list_append(proto[1], channel);
+	apseq = sdp_list_append(apseq, proto[1]);
+
+	sdp_uuid16_create(&obex_uuid, OBEX_UUID);
+	proto[2] = sdp_list_append(0, &obex_uuid);
+	apseq = sdp_list_append(apseq, proto[2]);
+
+	aproto = sdp_list_append(0, apseq);
+	sdp_set_access_protos(record, aproto);
+
+	sflist = sdp_data_alloc(dtd,formats);
+	sdp_attr_add(record, SDP_ATTR_SUPPORTED_REPOSITORIES, sflist);
+
+	sdp_set_info_attr(record, "OBEX Phonebook Access Server", 0, 0);
+
+	if (add_record_to_server(&adapter->bdaddr, record) < 0)
+		ret = -1;
+
+	sdp_data_free(channel);
+	sdp_list_free(proto[0], 0);
+	sdp_list_free(proto[1], 0);
+	sdp_list_free(proto[2], 0);
+	sdp_list_free(apseq, 0);
+	sdp_list_free(aproto, 0);
+
+	if (!ret)
+		return record->handle;
+	return ret;
+}
+
+static int add_opush_record(struct btd_adapter *adapter)
+{
+	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
+	uuid_t root_uuid, opush_uuid, l2cap_uuid, rfcomm_uuid, obex_uuid;
+	sdp_profile_desc_t profile[1];
+	sdp_list_t *aproto, *proto[3];
+	sdp_record_t *record;
+	uint8_t u8 = 12;
+	sdp_data_t *channel;
+#ifdef ANDROID
+	uint8_t formats[] = { 0x01, 0x02, 0xff };
+#else
+	uint8_t formats[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xff };
+#endif
+	void *dtds[sizeof(formats)], *values[sizeof(formats)];
+	unsigned int i;
+	uint8_t dtd = SDP_UINT8;
+	sdp_data_t *sflist;
+	int ret = 0;
+
+	record = sdp_record_alloc();
+	if (!record) return -1;
+
+	sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+	root = sdp_list_append(0, &root_uuid);
+	sdp_set_browse_groups(record, root);
+
+	sdp_uuid16_create(&opush_uuid, OBEX_OBJPUSH_SVCLASS_ID);
+	svclass_id = sdp_list_append(0, &opush_uuid);
+	sdp_set_service_classes(record, svclass_id);
+
+	sdp_uuid16_create(&profile[0].uuid, OBEX_OBJPUSH_PROFILE_ID);
+	profile[0].version = 0x0100;
+	pfseq = sdp_list_append(0, profile);
+	sdp_set_profile_descs(record, pfseq);
+
+	sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+	proto[0] = sdp_list_append(0, &l2cap_uuid);
+	apseq = sdp_list_append(0, proto[0]);
+
+	sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+	proto[1] = sdp_list_append(0, &rfcomm_uuid);
+	channel = sdp_data_alloc(SDP_UINT8, &u8);
+	proto[1] = sdp_list_append(proto[1], channel);
+	apseq = sdp_list_append(apseq, proto[1]);
+
+	sdp_uuid16_create(&obex_uuid, OBEX_UUID);
+	proto[2] = sdp_list_append(0, &obex_uuid);
+	apseq = sdp_list_append(apseq, proto[2]);
+
+	aproto = sdp_list_append(0, apseq);
+	sdp_set_access_protos(record, aproto);
+
+	for (i = 0; i < sizeof(formats); i++) {
+		dtds[i] = &dtd;
+		values[i] = &formats[i];
+	}
+	sflist = sdp_seq_alloc(dtds, values, sizeof(formats));
+	sdp_attr_add(record, SDP_ATTR_SUPPORTED_FORMATS_LIST, sflist);
+
+	sdp_set_info_attr(record, "OBEX Object Push", 0, 0);
+
+	if (add_record_to_server(&adapter->bdaddr, record) < 0)
+		ret = -1;
+
+	sdp_data_free(channel);
+	sdp_list_free(proto[0], 0);
+	sdp_list_free(proto[1], 0);
+	sdp_list_free(proto[2], 0);
+	sdp_list_free(apseq, 0);
+	sdp_list_free(aproto, 0);
+
+	if (!ret)
+		return record->handle;
+	return ret;
+}
+
+static DBusMessage *add_reserved_service_records(DBusConnection *conn,
+						DBusMessage *msg, void *data) {
+	DBusMessage *reply;
+	struct btd_adapter *adapter = data;
+	uint32_t *svc_classes;
+	uint32_t *handles;
+	uint32_t len, i;
+	int ret;
+
+	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_ARRAY, DBUS_TYPE_UINT32,
+				&svc_classes, &len, DBUS_TYPE_INVALID) == FALSE)
+		return btd_error_invalid_args(msg);
+
+	handles = g_malloc0(sizeof(uint32_t) * len);
+
+	for (i = 0; i < len; i++) {
+		switch (svc_classes[i]) {
+			case PBAP_PSE_SVCLASS_ID:
+				ret = add_pbap_pse_record(adapter);
+				break;
+			case HEADSET_AGW_SVCLASS_ID:
+				ret = add_headset_ag_record(adapter);
+				break;
+			case HANDSFREE_AGW_SVCLASS_ID:
+				ret = add_handsfree_ag_record(adapter);
+				break;
+			case OBEX_OBJPUSH_SVCLASS_ID:
+				ret = add_opush_record(adapter);
+				break;
+		}
+		if (ret < 0) {
+			g_free(handles);
+			return g_dbus_create_error(msg,
+				ERROR_INTERFACE ".Failed", "Failed to add sdp record");
+		} else
+			handles[i] = ret;
+	}
+
+	reply = dbus_message_new_method_return(msg);
+	dbus_message_append_args(reply, DBUS_TYPE_ARRAY, DBUS_TYPE_UINT32,
+					&handles, len, DBUS_TYPE_INVALID);
+
+	g_free(handles);
+	return reply;
+}
+
+static DBusMessage *remove_reserved_service_records(DBusConnection *conn,
+							DBusMessage *msg, void *data) {
+	uint32_t *handles;
+	uint32_t len, i;
+	
+	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_ARRAY, DBUS_TYPE_UINT32,
+				&handles, &len, DBUS_TYPE_INVALID) == FALSE)
+		return btd_error_invalid_args(msg);
+
+	for (i = 0; i < len; i++)
+		if (remove_record_from_server(handles[i]))
+			return g_dbus_create_error(msg,
+					ERROR_INTERFACE ".Failed", "Failed to remove sdp record");
+
+	return dbus_message_new_method_return(msg);
+}
+
 static DBusMessage *set_link_timeout(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -2067,6 +2404,8 @@ static GDBusMethodTable adapter_methods[] = {
 	{ "AddRfcommServiceRecord",	"sttq",	"u",	add_rfcomm_service_record },
 	{ "RemoveServiceRecord",	"u",	"",	remove_service_record },
 	{ "SetLinkTimeout",	"ou",	"",	set_link_timeout	},
+	{ "AddReservedServiceRecords",   "au",    "au",    add_reserved_service_records  },
+	{ "RemoveReservedServiceRecords", "au",    "",	remove_reserved_service_records  },
 	{ }
 };
 
