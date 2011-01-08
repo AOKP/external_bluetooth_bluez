@@ -211,6 +211,7 @@ struct btd_adapter_ops {
 							uint8_t *randomizer);
 	int (*remove_remote_oob_data) (int index, bdaddr_t *bdaddr);
 	int (*set_link_timeout) (int index, bdaddr_t *bdaddr, uint32_t num_slots);
+	int (*retry_authentication) (int index, bdaddr_t *bdaddr);
 };
 
 int btd_register_adapter_ops(struct btd_adapter_ops *ops, gboolean priority);
@@ -251,6 +252,9 @@ int btd_adapter_passkey_reply(struct btd_adapter *adapter, bdaddr_t *bdaddr,
 
 int btd_adapter_encrypt_link(struct btd_adapter *adapter, bdaddr_t *bdaddr,
 				bt_hci_result_t cb, gpointer user_data);
+
+int btd_adapter_retry_authentication(struct btd_adapter *adapter,
+				bdaddr_t *bdaddr);
 
 int btd_adapter_set_did(struct btd_adapter *adapter, uint16_t vendor,
 					uint16_t product, uint16_t version);

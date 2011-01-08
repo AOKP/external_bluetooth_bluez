@@ -3688,6 +3688,10 @@ static int hciops_set_link_timeout(int index, bdaddr_t *bdaddr, uint32_t num_slo
 	return err;
 }
 
+static int hciops_retry_authentication(int index, bdaddr_t *bdaddr)
+{
+	return request_authentication(index, bdaddr);
+}
 
 static struct btd_adapter_ops hci_ops = {
 	.setup = hciops_setup,
@@ -3729,6 +3733,7 @@ static struct btd_adapter_ops hci_ops = {
 	.add_remote_oob_data = hciops_add_remote_oob_data,
 	.remove_remote_oob_data = hciops_remove_remote_oob_data,
 	.set_link_timeout = hciops_set_link_timeout,
+	.retry_authentication = hciops_retry_authentication,
 };
 
 static int hciops_init(void)

@@ -92,7 +92,6 @@ gboolean device_is_authorizing(struct btd_device *device);
 void device_set_authorizing(struct btd_device *device, gboolean auth);
 void device_add_connection(struct btd_device *device, DBusConnection *conn);
 void device_remove_connection(struct btd_device *device, DBusConnection *conn);
-uint16_t device_get_handle(struct btd_device *device);
 void device_request_disconnect(struct btd_device *device, DBusMessage *msg);
 
 typedef void (*disconnect_watch) (struct btd_device *device, gboolean removal,

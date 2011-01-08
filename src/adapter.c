@@ -4103,6 +4103,11 @@ int btd_adapter_set_did(struct btd_adapter *adapter, uint16_t vendor,
 	return adapter_ops->set_did(adapter->dev_id, vendor, product, version);
 }
 
+int btd_adapter_retry_authentication(struct btd_adapter *adapter, bdaddr_t *bdaddr)
+{
+	return adapter_ops->retry_authentication(adapter->dev_id, bdaddr);
+}
+
 int adapter_create_bonding(struct btd_adapter *adapter, bdaddr_t *bdaddr,
 								uint8_t io_cap)
 {
