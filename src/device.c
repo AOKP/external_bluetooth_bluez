@@ -2477,6 +2477,12 @@ void device_cancel_authentication(struct btd_device *device, gboolean aborted)
 	g_free(auth);
 }
 
+void device_retry_authentication(struct btd_device *device)
+{
+	device_remove_bonding(device);
+	device_authentication_requested(device, device->handle);
+}
+
 gboolean device_is_authenticating(struct btd_device *device)
 {
 	return (device->authr != NULL);

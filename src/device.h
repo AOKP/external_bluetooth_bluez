@@ -79,6 +79,7 @@ int device_request_authentication(struct btd_device *device, auth_type_t type,
 				uint32_t passkey, void *cb);
 int device_request_oob_availability(struct btd_device *device,
 				void *cb, void  *user_data);
+void device_retry_authentication(struct btd_device *device);
 void device_cancel_authentication(struct btd_device *device, gboolean aborted);
 gboolean device_is_authenticating(struct btd_device *device);
 gboolean device_is_authorizing(struct btd_device *device);

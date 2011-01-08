@@ -551,6 +551,9 @@ void hcid_dbus_bonding_process_complete(bdaddr_t *local, bdaddr_t *peer,
 		 * request from the controller, i.e. this is not a new
 		 * pairing */
 		DBG("no pending auth request");
+		// If the error is "PIN or Key Missing", retry authentication
+		if (status == 0x06)
+			device_retry_authentication(device);
 		return;
 	}
 
