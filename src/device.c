@@ -915,11 +915,6 @@ void device_remove_connection(struct btd_device *device, DBusConnection *conn)
 					DBUS_TYPE_BOOLEAN, &device->connected);
 }
 
-uint16_t device_get_handle(struct btd_device *device)
-{
-	return device->handle;
-}
-
 guint device_add_disconnect_watch(struct btd_device *device,
 				disconnect_watch watch, void *user_data,
 				GDestroyNotify destroy)
@@ -2091,13 +2086,18 @@ void device_bonding_complete(struct btd_device *device, uint8_t status)
 {
 	struct bonding_req *bonding = device->bonding;
 	struct authentication_req *auth = device->authr;
+	bdaddr_t bdaddr;
 
 	DBG("bonding %p status 0x%02x", bonding, status);
 
 	if (auth && auth->type == AUTH_TYPE_NOTIFY && auth->agent)
 		agent_cancel(auth->agent);
 
-	if (status) {
+	if (status == 0x06) {
+		device_remove_bonding(device);
+		device_get_address(device, &bdaddr);
+		btd_adapter_retry_authentication(device->adapter, &bdaddr);
+	} else if (status) {
 		device_cancel_authentication(device, TRUE);
 		device_cancel_bonding(device, status);
 		return;
