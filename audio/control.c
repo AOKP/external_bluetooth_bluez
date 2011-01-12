@@ -182,6 +182,8 @@ struct control {
 	gboolean target;
 
 	uint8_t key_quirks[256];
+
+	gboolean ignore_pause;
 };
 
 static struct {
@@ -376,8 +378,18 @@ static void handle_panel_passthrough(struct control *control,
 #ifdef ANDROID
 	if ((operands[0] & 0x7F) == PAUSE_OP) {
 		if (!sink_is_streaming(control->dev)) {
-			DBG("AVRCP: Ignoring Pause key");
-			return;
+			if (pressed) {
+				uint8_t key_quirks =
+					control->key_quirks[PAUSE_OP];
+				DBG("AVRCP: Ignoring Pause key - pressed");
+				if (!(key_quirks & QUIRK_NO_RELEASE))
+					control->ignore_pause = TRUE;
+				return;
+			} else if (!pressed && control->ignore_pause) {
+				DBG("AVRCP: Ignoring Pause key - released");
+				control->ignore_pause = FALSE;
+				return;
+			}
 		}
 	}
 #endif
@@ -667,6 +679,7 @@ static void init_uinput(struct control *control)
 		control->key_quirks[PLAY_OP] |= QUIRK_NO_RELEASE;
 		control->key_quirks[PAUSE_OP] |= QUIRK_NO_RELEASE;
 	}
+	control->ignore_pause = FALSE;
 
 	ba2str(&dev->dst, address);
 
