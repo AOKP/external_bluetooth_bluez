@@ -185,3 +185,33 @@ LOCAL_MODULE:=rfcomm
 
 include $(BUILD_EXECUTABLE)
 
+ifeq ($(BOARD_HAVE_BLUETOOTH_CSR),true)
+#
+# bccmd
+#
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES:= \
+	bccmd.c \
+	csr.c \
+	csr_hci.c \
+	csr_bcsp.c \
+	csr_h4.c \
+	csr_3wire.c \
+	ubcsp.c
+
+LOCAL_CFLAGS:= \
+	-DVERSION=\"4.93\"
+
+LOCAL_C_INCLUDES:=\
+	$(LOCAL_PATH)/../lib \
+	$(LOCAL_PATH)/../src \
+
+LOCAL_SHARED_LIBRARIES := \
+	libbluetooth libbluetoothd
+
+LOCAL_MODULE:=bccmd
+
+include $(BUILD_EXECUTABLE)
+endif
