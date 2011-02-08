@@ -876,7 +876,6 @@ static void control_connect_cb(GIOChannel *chan, GError *conn_err,
 		error("%s", conn_err->message);
 		reply = connection_attempt_failed(iconn->pending_connect,
 							conn_err->message);
-		g_io_channel_shutdown(chan, TRUE, NULL);
 		goto failed;
 	}
 
