@@ -129,6 +129,21 @@ static struct network_session *find_session(GSList *list, GIOChannel *chan)
 	return NULL;
 }
 
+static struct network_session *find_session_by_addr(GSList *list, bdaddr_t dst_addr)
+{
+	GSList *l;
+
+	for (l = list; l; l = l->next) {
+		struct network_session *session = l->data;
+
+		if (!bacmp(&session->dst, &dst_addr)) {
+			return session;
+		}
+	}
+
+	return NULL;
+}
+
 static void add_lang_attr(sdp_record_t *r)
 {
 	sdp_lang_attr_t base_lang;
@@ -280,6 +295,19 @@ static ssize_t send_bnep_ctrl_rsp(int sk, uint16_t val)
 	return send(sk, &rsp, sizeof(rsp), 0);
 }
 
+static void session_free(void *data)
+{
+	struct network_session *session = data;
+
+	if (session->watch)
+		g_source_remove(session->watch);
+
+	if (session->io)
+		g_io_channel_unref(session->io);
+
+	g_free(session);
+}
+
 static void bnep_watchdog_cb(GIOChannel *chan, GIOCondition cond,
 				gpointer data)
 {
@@ -300,6 +328,7 @@ static void bnep_watchdog_cb(GIOChannel *chan, GIOCondition cond,
 	g_io_channel_shutdown(chan, TRUE, NULL);
 	g_io_channel_unref(session->io);
 	session->io = NULL;
+	session_free(session);
 }
 
 
@@ -393,19 +422,6 @@ static uint16_t bnep_setup_decode(struct bnep_setup_conn_req *req,
 	}
 
 	return 0;
-}
-
-static void session_free(void *data)
-{
-	struct network_session *session = data;
-
-	if (session->watch)
-		g_source_remove(session->watch);
-
-	if (session->io)
-		g_io_channel_unref(session->io);
-
-	g_free(session);
 }
 
 static void setup_destroy(void *user_data)
@@ -695,6 +711,39 @@ static DBusMessage *unregister_server(DBusConnection *conn,
 	return reply;
 }
 
+static DBusMessage *disconnect_device(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessage *reply;
+	struct network_server *ns = data;
+	struct network_session *session;
+	const char *addr, *devname;
+	bdaddr_t dst_addr;
+
+	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &addr,
+						DBUS_TYPE_STRING, &devname,
+						DBUS_TYPE_INVALID))
+		return NULL;
+
+	str2ba(addr, &dst_addr);
+	session = find_session_by_addr(ns->sessions, dst_addr);
+
+	if (!session)
+		return btd_error_failed(msg, "No active session");
+
+	if (session->io) {
+                bnep_if_down(devname);
+                bnep_kill_connection(&dst_addr);
+	} else
+		return btd_error_not_connected(msg);
+
+	reply = dbus_message_new_method_return(msg);
+	if (!reply)
+		return NULL;
+	return reply;
+}
+
+
 static void adapter_free(struct network_adapter *na)
 {
 	if (na->io != NULL) {
@@ -749,6 +798,7 @@ static void path_unregister(void *data)
 static GDBusMethodTable server_methods[] = {
 	{ "Register",	"ss",	"",	register_server		},
 	{ "Unregister",	"s",	"",	unregister_server	},
+	{ "DisconnectDevice", "ss",	"",	disconnect_device	},
 	{ }
 };
 
