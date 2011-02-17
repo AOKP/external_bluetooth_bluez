@@ -61,6 +61,7 @@ struct network_session {
 	bdaddr_t	dst;		/* Remote Bluetooth Address */
 	GIOChannel	*io;		/* Pending connect channel */
 	guint		watch;		/* BNEP socket watch */
+        guint           io_watch;
 };
 
 struct network_adapter {
@@ -304,6 +305,9 @@ static void session_free(void *data)
 	if (session->watch)
 		g_source_remove(session->watch);
 
+	if (session->io_watch)
+		g_source_remove(session->io_watch);
+
 	if (session->io)
 		g_io_channel_unref(session->io);
 
@@ -374,7 +378,7 @@ static int server_connadd(struct network_server *ns,
 				DBUS_TYPE_UINT16, &dst_role,
 				DBUS_TYPE_INVALID);
 
-	g_io_add_watch(session->io, G_IO_ERR | G_IO_HUP,
+	session->io_watch = g_io_add_watch(session->io, G_IO_ERR | G_IO_HUP,
 			(GIOFunc) bnep_watchdog_cb, ns);
 
 	return 0;
