@@ -81,3 +81,4 @@ int add_record_to_server(const bdaddr_t *src, sdp_record_t *rec);
 int remove_record_from_server(uint32_t handle);
 
 void sdp_init_services_list(bdaddr_t *device);
+static inline int android_get_control_socket(const char *name);
