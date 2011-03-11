@@ -104,7 +104,7 @@
 #define QUIRK_NO_RELEASE	1 << 0
 
 static DBusConnection *connection = NULL;
-
+static gchar *input_device_name = NULL;
 static GSList *servers = NULL;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -645,7 +645,7 @@ static int uinput_create(char *name)
 static void init_uinput(struct control *control)
 {
 	struct audio_device *dev = control->dev;
-	char address[18], name[248 + 1];
+	char address[18], name[248 + 1], *uinput_dev_name;
 
 	device_get_name(dev->btd_dev, name, sizeof(name));
 	if (g_str_equal(name, "Nokia CK-20W")) {
@@ -657,7 +657,12 @@ static void init_uinput(struct control *control)
 
 	ba2str(&dev->dst, address);
 
-	control->uinput = uinput_create(address);
+	/* Use device name from config file if specified */
+	uinput_dev_name = input_device_name;
+	if (!uinput_dev_name)
+		uinput_dev_name = address;
+
+	control->uinput = uinput_create(uinput_dev_name);
 	if (control->uinput < 0)
 		error("AVRCP: failed to init uinput for %s", address);
 	else
@@ -856,6 +861,14 @@ int avrcp_register(DBusConnection *conn, const bdaddr_t *src, GKeyFile *config)
 			g_error_free(err);
 		} else
 			master = tmp;
+		err = NULL;
+		input_device_name = g_key_file_get_string(config,
+			"AVRCP", "InputDeviceName", &err);
+		if (err) {
+			DBG("audio.conf: %s", err->message);
+			input_device_name = NULL;
+			g_error_free(err);
+		}
 	}
 
 	server = g_new0(struct avctp_server, 1);
