@@ -27,7 +27,11 @@ LOCAL_SRC_FILES:= \
 	sdpd-database.c \
 	sdp-xml.c \
 	storage.c \
-	textfile.c
+	textfile.c \
+	attrib-server.c \
+	att.c \
+	gatt.c \
+	gattrib.c \
 
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.89\" \
