@@ -13,7 +13,7 @@ LOCAL_SRC_FILES:= \
 	mcap_sync.c \
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.89\" \
+	-DVERSION=\"4.93\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
 	-DCONFIGDIR=\"/etc/bluetooth\" \
 

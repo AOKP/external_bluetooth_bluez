@@ -13,7 +13,7 @@ LOCAL_SRC_FILES:= \
 	pand.c bnep.c sdp.c
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.47\" -DSTORAGEDIR=\"/data/misc/bluetoothd\" -DNEED_PPOLL -D__ANDROID__
+	-DVERSION=\"4.93\" -DSTORAGEDIR=\"/data/misc/bluetoothd\" -DNEED_PPOLL -D__ANDROID__
 
 LOCAL_C_INCLUDES:=\
 	$(LOCAL_PATH)/../lib \

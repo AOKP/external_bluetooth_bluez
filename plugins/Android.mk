@@ -12,7 +12,7 @@ LOCAL_SRC_FILES:= \
 	dbusoob.c \
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.40\" \
+	-DVERSION=\"4.93\" \
 	-DBLUETOOTH_PLUGIN_BUILTIN \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\"
 
