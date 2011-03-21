@@ -30,7 +30,7 @@ LOCAL_SRC_FILES:= \
 	textfile.c
 
 LOCAL_CFLAGS:= \
-	-DVERSION=\"4.40\" \
+	-DVERSION=\"4.89\" \
 	-DSTORAGEDIR=\"/data/misc/bluetoothd\" \
 	-DCONFIGDIR=\"/etc/bluetooth\" \
 	-DSERVICEDIR=\"/system/bin\" \
