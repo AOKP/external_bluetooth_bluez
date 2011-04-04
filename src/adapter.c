@@ -152,6 +152,8 @@ struct btd_adapter {
 
 static void adapter_set_pairable_timeout(struct btd_adapter *adapter,
 					guint interval);
+static DBusMessage *set_discoverable(DBusConnection *conn, DBusMessage *msg,
+				gboolean discoverable, void *data);
 
 static int found_device_cmp(const struct remote_dev_info *d1,
 			const struct remote_dev_info *d2)
@@ -390,7 +392,7 @@ static gboolean discov_timeout_handler(gpointer user_data)
 
 	adapter->discov_timeout_id = 0;
 
-	adapter_ops->set_discoverable(adapter->dev_id, FALSE);
+	set_discoverable(NULL, NULL, FALSE, user_data);
 
 	return FALSE;
 }
