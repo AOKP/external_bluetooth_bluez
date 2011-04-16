@@ -58,6 +58,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
+	android_audio_hw.c \
 	liba2dp.c \
 	ipc.c \
 	../sbc/sbc_primitives.c \
@@ -82,8 +83,11 @@ LOCAL_C_INCLUDES:= \
 	system/bluetooth/bluez-clean-headers
 
 LOCAL_SHARED_LIBRARIES := \
+	libpower \
 	libcutils
 
-LOCAL_MODULE := liba2dp
+LOCAL_MODULE := audio.a2dp.default
+LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
