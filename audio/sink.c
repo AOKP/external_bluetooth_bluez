@@ -721,6 +721,21 @@ gboolean sink_is_active(struct audio_device *dev)
 	return FALSE;
 }
 
+gboolean sink_is_streaming(struct audio_device *dev)
+{
+	struct sink *sink = dev->sink;
+
+	if (sink == NULL) {
+		DBG("Sink is Null");
+		return FALSE;
+	}
+
+	if (sink_get_state(dev) == AVDTP_STATE_STREAMING)
+		return TRUE;
+
+	return FALSE;
+}
+
 avdtp_state_t sink_get_state(struct audio_device *dev)
 {
 	struct sink *sink = dev->sink;

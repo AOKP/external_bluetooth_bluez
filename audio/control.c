@@ -60,6 +60,7 @@
 #include "dbus-common.h"
 
 #define AVCTP_PSM 23
+#define AVCTP_BROWSING_PSM 0x001B
 
 /* Message types */
 #define AVCTP_COMMAND		0
@@ -78,11 +79,15 @@
 #define CTYPE_ACCEPTED		0x9
 #define CTYPE_REJECTED		0xA
 #define CTYPE_STABLE		0xC
+#define CTYPE_NOTIFY		0x3
+#define CTYPE_INTERIM		0xF
+#define CTYPE_CHANGED		0xD
 
 /* opcodes */
 #define OP_UNITINFO		0x30
 #define OP_SUBUNITINFO		0x31
 #define OP_PASSTHROUGH		0x7c
+#define OP_VENDORDEPENDENT	0x0
 
 /* subunits of interest */
 #define SUBUNIT_PANEL		0x09
@@ -102,6 +107,68 @@
 #define BACKWARD_OP		0x4c
 
 #define QUIRK_NO_RELEASE	1 << 0
+
+/* BT SIG IDs */
+#define SIG_ID_BTSIG		0X1958
+
+/* AVRCP1.3 PDU IDs */
+#define PDU_GET_CAPABILITY_ID		0x10
+#define PDU_GET_ELEMENT_ATTRIBUTES	0x20
+#define PDU_RGR_NOTIFICATION_ID		0X31
+#define PDU_REQ_CONTINUE_RSP_ID		0X40
+#define PDU_ABORT_CONTINUE_RSP_ID	0X41
+#define PDU_GET_PLAY_STATUS_ID		0x30
+
+/* AVRCP1.3 Capability IDs */
+#define CAP_COMPANY_ID		0X2
+#define CAP_EVENTS_SUPPORTED_ID	0X3
+
+/* AVRCP1.3 Supported Events */
+#define EVENT_PLAYBACK_STATUS_CHANGED	0x1
+#define EVENT_TRACK_CHANGED		0x2
+#define EVENT_AVAILABLE_PLAYERS_CHANGED	0xa
+#define EVENT_ADDRESSED_PLAYER_CHANGED	0xb
+
+/* AVRCP1.3 Error/Staus Codes */
+#define ERROR_INVALID_PDU	0x00
+#define ERROR_INVALID_PARAMETER	0x01
+#define ERROR_PARAM_NOT_FOUND	0X02
+#define ERROR_INTERNAL		0X03
+#define STATUS_OP_COMPLETED	0X04
+#define STATUS_UID_CHANGED	0X05
+#define ERROR_INVALID_DIRECTION	0X07
+#define ERROR_NO_DIRECTORY	0X08
+#define ERROR_UID_NOT_EXIST	0X09
+
+/* AVRCP1.3 MetaData Attributes ID */
+#define METADATA_DEFAULT_MASK	0x7F
+#define METADATA_TITLE		0X1
+#define METADATA_ARTIST		0X2
+#define METADATA_ALBUM		0X3
+#define METADATA_MEDIA_NUMBER	0X4
+#define METADATA_TOTAL_MEDIA	0X5
+#define METADATA_GENRE		0X6
+#define METADATA_PLAYING_TIME	0X7
+
+#define METADATA_MAX_STRING_LEN	150
+#define METADATA_MAX_NUMBER_LEN	40
+#define DEFAULT_METADATA_STRING	"Unknown"
+#define DEFAULT_METADATA_NUMBER	"1234567890"
+#define METADATA_SUPPORTED_CNT	6
+#define AVRCP_MAX_PKT_SIZE	512
+
+/* AVRCP1.3 Character set */
+#define CHARACTER_SET_UTF8	0X6A
+
+/* AVRCP1.3 Playback status */
+#define STATUS_STOPPED	0X00
+#define STATUS_PLAYING	0X01
+#define STATUS_PAUSED	0X02
+#define STATUS_FWD_SEEK	0X03
+#define STATUS_REV_SEEK	0X04
+#define STATUS_ERROR	0XFF
+
+
 
 static DBusConnection *connection = NULL;
 static gchar *input_device_name = NULL;
@@ -127,6 +194,16 @@ struct avrcp_header {
 } __attribute__ ((packed));
 #define AVRCP_HEADER_LENGTH 3
 
+struct avrcp_params {
+	uint32_t company_id:24;
+	uint32_t pdu_id:8;
+	uint8_t packet_type:2;
+	uint8_t reserved:6;
+	uint16_t param_len;
+	uint8_t capability_id;
+} __attribute__ ((packed));
+#define AVRCP_PKT_PARAMS_LEN 8;
+
 #elif __BYTE_ORDER == __BIG_ENDIAN
 
 struct avctp_header {
@@ -147,6 +224,16 @@ struct avrcp_header {
 } __attribute__ ((packed));
 #define AVRCP_HEADER_LENGTH 3
 
+struct avrcp_params {
+	uint32_t pdu_id:8;
+	uint32_t company_id:24;
+	uint8_t reserved:6;
+	uint8_t packet_type:2;
+	uint16_t param_len;
+	uint8_t capability_id;
+} __attribute__ ((packed));
+#define AVRCP_PKT_PARAMS_LEN 8;
+
 #else
 #error "Unknown byte order"
 #endif
@@ -166,6 +253,36 @@ struct avctp_server {
 #endif
 };
 
+struct meta_data {
+	gchar *title;
+	gchar *artist;
+	gchar *album;
+	gchar *media_number;
+	gchar *total_media_count;
+	gchar *playing_time;
+	gchar *remaining_mdata;
+	int remaining_mdata_len;
+	uint8_t trans_id_event_track;
+	uint8_t trans_id_event_playback;
+	uint8_t trans_id_event_addressed_player;
+	uint8_t trans_id_event_available_palyer;
+	uint8_t trans_id_get_play_status;
+	gboolean reg_track_changed;
+	gboolean reg_playback_status;
+	gboolean reg_addressed_player;
+	gboolean reg_available_palyer;
+	gboolean req_get_play_status;
+	uint8_t current_play_status;
+};
+
+struct meta_data_field {
+	uint32_t att_id;
+	uint16_t char_set_id;
+	uint16_t att_len;
+	char val[1];
+};
+#define METADATA_FIELD_LEN 8
+
 struct control {
 	struct audio_device *dev;
 
@@ -181,6 +298,9 @@ struct control {
 	gboolean target;
 
 	uint8_t key_quirks[256];
+
+	gboolean ignore_pause;
+	struct meta_data *mdata;
 };
 
 static struct {
@@ -201,6 +321,15 @@ static struct {
 static GSList *avctp_callbacks = NULL;
 
 static void auth_cb(DBusError *derr, void *user_data);
+
+static int send_meta_data(struct control *control, uint8_t trans_id,
+				uint8_t att_mask, uint8_t att_count);
+static int send_meta_data_continue_response(struct control *control,
+				uint8_t trans_id);
+static int send_notification(struct control *control,
+		uint16_t event_id, uint16_t event_data);
+static int send_play_status(struct control *control, uint32_t song_len,
+                        uint32_t song_position, uint8_t play_status);
 
 static sdp_record_t *avrcp_ct_record(void)
 {
@@ -275,7 +404,8 @@ static sdp_record_t *avrcp_tg_record(void)
 	sdp_record_t *record;
 	sdp_data_t *psm, *version, *features;
 	uint16_t lp = AVCTP_PSM;
-	uint16_t avrcp_ver = 0x0100, avctp_ver = 0x0103, feat = 0x000f;
+	uint16_t browsing_psm = AVCTP_BROWSING_PSM;
+	uint16_t avrcp_ver = 0x0103, avctp_ver = 0x0103, feat = 0x000f;
 
 #ifdef ANDROID
 	feat = 0x0001;
@@ -498,7 +628,9 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 	unsigned char buf[1024], *operands;
 	struct avctp_header *avctp;
 	struct avrcp_header *avrcp;
+	struct avrcp_params *params;
 	int ret, packet_size, operand_count, sock;
+	struct meta_data *mdata = control->mdata;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL))
 		goto failed;
@@ -537,6 +669,7 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 
 	operands = buf + sizeof(struct avctp_header) + sizeof(struct avrcp_header);
 	operand_count = ret;
+	params = (struct avrcp_params *)(buf + sizeof(struct avctp_header) + sizeof(struct avrcp_header));
 
 	DBG("AVRCP %s 0x%01X, subunit_type 0x%02X, subunit_id 0x%01X, "
 			"opcode 0x%02X, %d operands",
@@ -574,6 +707,130 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 			operands[1] = SUBUNIT_PANEL << 3;
 		DBG("reply to %s", avrcp->opcode == OP_UNITINFO ?
 				"OP_UNITINFO" : "OP_SUBUNITINFO");
+	} else if (avctp->cr == AVCTP_COMMAND &&
+			(avrcp->code == CTYPE_STATUS || avrcp->code == CTYPE_NOTIFY
+			|| avrcp->code == CTYPE_CONTROL) &&
+			avrcp->opcode == OP_VENDORDEPENDENT) {
+		DBG("Got Vendor Dep opcode");
+		if (params->pdu_id == PDU_GET_CAPABILITY_ID) {
+			DBG("Pdu id is PDU_GET_CAPABILITY_ID");
+			avctp->cr = AVCTP_RESPONSE;
+			operands = (unsigned char *)params + AVRCP_PKT_PARAMS_LEN;
+			if (params->capability_id == CAP_COMPANY_ID) {
+				avrcp->code = CTYPE_STABLE;
+				params->param_len = htons(5);
+				operands[0] = 0x1; // Capability Count
+				operands[1] = 0x00;
+				//BT SIG Company id is 0x1958
+				operands[2] = 0x19;
+				operands[3] = 0x58;
+				packet_size = packet_size + 4;
+			} else if (params->capability_id == CAP_EVENTS_SUPPORTED_ID) {
+				avrcp->code = CTYPE_STABLE;
+				params->param_len = htons(6);
+				operands[0] = 0x2; // Capability Count
+				operands[1] = EVENT_PLAYBACK_STATUS_CHANGED;
+				operands[2] = EVENT_TRACK_CHANGED;
+				packet_size = packet_size + 3;
+			} else {
+				avctp->cr = AVCTP_RESPONSE;
+				avrcp->code = CTYPE_REJECTED;
+				params->param_len = htons(0x1);
+				params->capability_id = ERROR_INVALID_PARAMETER;
+			}
+		} else if (params->pdu_id == PDU_GET_ELEMENT_ATTRIBUTES) {
+			DBG("Pdu id is PDU_GET_ELEMENT_ATTRIBUTES");
+			operands = (unsigned char *)params;
+			operands += AVRCP_PKT_PARAMS_LEN;
+			operands += 7;
+			uint8_t att_count = (int)(*operands);
+			DBG("Received att_count is %d", att_count);
+			uint32_t *att_id = (uint32_t *)(operands+1);
+			uint8_t att_mask = 0;
+			uint8_t index = 0;
+			for (index = 0; index < att_count; index++) {
+				int att_val = htonl(*att_id);
+				att_mask |=  1 << (att_val - 1);
+				att_id += 1;
+			}
+			if (att_count == 0) {
+				att_count = METADATA_SUPPORTED_CNT;
+				att_mask = METADATA_DEFAULT_MASK;
+			}
+			DBG("MetaData mask is %d", att_mask);
+			send_meta_data(control, avctp->transaction, att_mask, att_count);
+			return TRUE;
+		} else if (params->pdu_id == PDU_REQ_CONTINUE_RSP_ID) {
+			if (mdata->remaining_mdata_len == 0) {
+				avctp->cr = AVCTP_RESPONSE;
+				avrcp->code = CTYPE_REJECTED;
+				params->param_len = htons(0x1);
+				params->capability_id = ERROR_INVALID_PARAMETER;
+			} else {
+				send_meta_data_continue_response(control, avctp->transaction);
+				return TRUE;
+			}
+
+		} else if (params->pdu_id == PDU_ABORT_CONTINUE_RSP_ID) {
+			if (mdata->remaining_mdata_len == 0) {
+				avctp->cr = AVCTP_RESPONSE;
+				avrcp->code = CTYPE_REJECTED;
+				params->param_len = htons(0x1);
+				params->capability_id = ERROR_INVALID_PARAMETER;
+			} else {
+				mdata->remaining_mdata_len = 0;
+				g_free(mdata->remaining_mdata);
+				mdata->remaining_mdata = NULL;
+				avctp->cr = AVCTP_RESPONSE;
+				avrcp->code = CTYPE_STABLE;
+			}
+		} else if (params->pdu_id == PDU_RGR_NOTIFICATION_ID) {
+			avctp->cr = AVCTP_RESPONSE;
+			if (params->capability_id == EVENT_TRACK_CHANGED) {
+				mdata->trans_id_event_track = avctp->transaction;
+				mdata->reg_track_changed = TRUE;
+				avrcp->code = CTYPE_INTERIM;
+				operands = (unsigned char *)params;
+				operands += AVRCP_PKT_PARAMS_LEN;
+				int index;
+				if (mdata->current_play_status == STATUS_STOPPED) {
+					for (index = 0; index < 8; index++, operands++)
+						*operands = 0xFF;
+				} else {
+					for (index = 0; index < 8; index++, operands++)
+						*operands = 0x00;
+				}
+				params->param_len = htons(0x9);
+				packet_size += 4;
+			} else if (params->capability_id == EVENT_PLAYBACK_STATUS_CHANGED) {
+				mdata->trans_id_event_playback = avctp->transaction;
+				mdata->reg_playback_status = TRUE;
+				avrcp->code = CTYPE_INTERIM;
+				params->param_len = htons(0x2);
+				operands = (unsigned char *)params;
+				operands += AVRCP_PKT_PARAMS_LEN;
+				*operands = mdata->current_play_status;
+				packet_size -= 3;
+			} else {
+				avctp->cr = AVCTP_RESPONSE;
+				avrcp->code = CTYPE_REJECTED;
+				params->param_len = htons(0x1);
+				params->capability_id = ERROR_INVALID_PARAMETER;
+			}
+		} else if (params->pdu_id == PDU_GET_PLAY_STATUS_ID) {
+			g_dbus_emit_signal(control->dev->conn, control->dev->path,
+					AUDIO_CONTROL_INTERFACE, "GetPlayStatus",
+					DBUS_TYPE_INVALID);
+			mdata->trans_id_get_play_status = avctp->transaction;
+			mdata->req_get_play_status = TRUE;
+			return TRUE;
+		} else {
+				avctp->cr = AVCTP_RESPONSE;
+				avrcp->code = CTYPE_REJECTED;
+				params->param_len = htons(0x1);
+				params->capability_id = ERROR_INVALID_PDU;
+				packet_size += 1;
+		}
 	} else {
 		avctp->cr = AVCTP_RESPONSE;
 		avrcp->code = CTYPE_REJECTED;
@@ -1077,6 +1334,122 @@ static DBusMessage *volume_down(DBusConnection *conn, DBusMessage *msg,
 	return dbus_message_new_method_return(msg);
 }
 
+static DBusMessage *update_notification(DBusConnection *conn, DBusMessage *msg,
+								void *data)
+{
+	struct audio_device *device = data;
+	struct control *control = device->control;
+	struct meta_data *mdata = control->mdata;
+	DBusMessage *reply;
+	uint16_t event_id;
+	uint64_t event_data;
+	int err;
+
+	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_UINT16, &event_id,
+						DBUS_TYPE_UINT64, &event_data,
+						DBUS_TYPE_INVALID) == FALSE) {
+		return g_dbus_create_error(msg, ERROR_INTERFACE ".InvalidArguments",
+			"Invalid arguments in method call");
+	}
+
+	DBG("Notification data is %d %d", (int)event_id, (int)event_data);
+
+	if (control->state != AVCTP_STATE_CONNECTED)
+		return g_dbus_create_error(msg,
+			ERROR_INTERFACE ".NotConnected",
+				"Device not Connected");
+
+	send_notification(control, event_id, event_data);
+
+	return dbus_message_new_method_return(msg);
+}
+
+static DBusMessage *update_play_status(DBusConnection *conn, DBusMessage *msg,
+								void *data)
+{
+	struct audio_device *device = data;
+	struct control *control = device->control;
+	struct meta_data *mdata = control->mdata;
+	DBusMessage *reply;
+	uint32_t duration, position;
+	uint32_t play_status;
+	int err;
+        DBG("update_play_status called");
+
+	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_UINT32, &duration,
+						DBUS_TYPE_UINT32, &position,
+						DBUS_TYPE_UINT32, &play_status,
+						DBUS_TYPE_INVALID) == FALSE) {
+		return g_dbus_create_error(msg, ERROR_INTERFACE ".InvalidArguments",
+			"Invalid arguments in method call");
+	}
+
+	DBG("PlayStatus data is %d %d %d", duration, position, play_status);
+	mdata->current_play_status = (uint8_t)play_status;
+
+	if (control->state != AVCTP_STATE_CONNECTED)
+		return g_dbus_create_error(msg,
+			ERROR_INTERFACE ".NotConnected",
+				"Device not Connected");
+
+	send_play_status(control, duration, position, play_status);
+
+	return dbus_message_new_method_return(msg);
+}
+
+
+static DBusMessage *update_metadata(DBusConnection *conn, DBusMessage *msg,
+								void *data)
+{
+	struct audio_device *device = data;
+	struct control *control = device->control;
+	struct meta_data *mdata = control->mdata;
+	DBusMessage *reply;
+	const gchar *title, *artist, *album;
+	const gchar *media_number, *total_media_count, *playing_time;
+	int err;
+
+	if (dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &title,
+						DBUS_TYPE_STRING, &artist,
+						DBUS_TYPE_STRING, &album,
+						DBUS_TYPE_STRING, &media_number,
+						DBUS_TYPE_STRING, &total_media_count,
+						DBUS_TYPE_STRING, &playing_time,
+						DBUS_TYPE_INVALID) == FALSE) {
+		return g_dbus_create_error(msg, ERROR_INTERFACE ".InvalidArguments",
+			"Invalid arguments in method call");
+	}
+
+	DBG("MetaData is %s %s %s %s %s %s", title, artist, album, media_number,
+			total_media_count, playing_time);
+	if (strlen(title) < METADATA_MAX_STRING_LEN)
+		strcpy(mdata->title, title);
+	else
+		strncpy(mdata->title, title, (METADATA_MAX_STRING_LEN-1));
+	if (strlen(artist) < METADATA_MAX_STRING_LEN)
+		strcpy(mdata->artist, artist);
+	else
+		strncpy(mdata->artist, artist, (METADATA_MAX_STRING_LEN-1));
+	if (strlen(album) < METADATA_MAX_STRING_LEN)
+		strcpy(mdata->album, album);
+	else
+		strncpy(mdata->album, album, (METADATA_MAX_STRING_LEN-1));
+	if (strlen(media_number) < METADATA_MAX_NUMBER_LEN)
+		strcpy(mdata->media_number, media_number);
+	else
+		strncpy(mdata->media_number, media_number, (METADATA_MAX_NUMBER_LEN-1));
+	if (strlen(total_media_count) < METADATA_MAX_NUMBER_LEN)
+		strcpy(mdata->total_media_count, total_media_count);
+	else
+		strncpy(mdata->total_media_count, total_media_count, (METADATA_MAX_NUMBER_LEN-1));
+	if (strlen(playing_time) < METADATA_MAX_NUMBER_LEN)
+		strcpy(mdata->playing_time, playing_time);
+	else
+		strncpy(mdata->playing_time, playing_time, (METADATA_MAX_NUMBER_LEN-1));
+
+	return dbus_message_new_method_return(msg);
+}
+
 static DBusMessage *control_get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -1112,6 +1485,9 @@ static GDBusMethodTable control_methods[] = {
 	{ "GetProperties",	"",	"a{sv}",control_get_properties },
 	{ "VolumeUp",		"",	"",	volume_up },
 	{ "VolumeDown",		"",	"",	volume_down },
+	{ "UpdateMetaData",	"ssssss",	"",	update_metadata },
+	{ "UpdatePlayStatus",	"uuu",	"",	update_play_status },
+	{ "UpdateNotification",	"qt",	"",	update_notification },
 	{ NULL, NULL, NULL, NULL }
 };
 
@@ -1119,8 +1495,42 @@ static GDBusSignalTable control_signals[] = {
 	{ "Connected",			"",	G_DBUS_SIGNAL_FLAG_DEPRECATED},
 	{ "Disconnected",		"",	G_DBUS_SIGNAL_FLAG_DEPRECATED},
 	{ "PropertyChanged",		"sv"	},
+	{ "GetPlayStatus",		""	},
 	{ NULL, NULL }
 };
+
+static void metadata_cleanup(struct meta_data *mdata) {
+	if (mdata->title) {
+		g_free(mdata->title);
+		mdata->title = NULL;
+	}
+	if (mdata->artist) {
+		g_free(mdata->artist);
+		mdata->artist = NULL;
+	}
+	if (mdata->album) {
+		g_free(mdata->album);
+		mdata->album = NULL;
+	}
+	if (mdata->media_number) {
+		g_free(mdata->media_number);
+		mdata->media_number = NULL;
+	}
+	if (mdata->total_media_count) {
+		g_free(mdata->total_media_count);
+		mdata->total_media_count = NULL;
+	}
+	if (mdata->playing_time) {
+		g_free(mdata->playing_time);
+		mdata->playing_time = NULL;
+	}
+	if (mdata->remaining_mdata) {
+		g_free(mdata->remaining_mdata);
+		mdata->remaining_mdata = NULL;
+		mdata->remaining_mdata_len = 0;
+	}
+
+}
 
 static void path_unregister(void *data)
 {
@@ -1133,6 +1543,8 @@ static void path_unregister(void *data)
 	if (control->state != AVCTP_STATE_DISCONNECTED)
 		avctp_disconnected(dev);
 
+	metadata_cleanup(control->mdata);
+	g_free(control->mdata);
 	g_free(control);
 	dev->control = NULL;
 }
@@ -1154,6 +1566,7 @@ void control_update(struct audio_device *dev, uint16_t uuid16)
 struct control *control_init(struct audio_device *dev, uint16_t uuid16)
 {
 	struct control *control;
+	struct meta_data *mdata;
 
 	if (!g_dbus_register_interface(dev->conn, dev->path,
 					AUDIO_CONTROL_INTERFACE,
@@ -1171,6 +1584,49 @@ struct control *control_init(struct audio_device *dev, uint16_t uuid16)
 
 	if (uuid16 == AV_REMOTE_TARGET_SVCLASS_ID)
 		control->target = TRUE;
+
+	mdata = g_new0(struct meta_data, 1);
+	if (!mdata) {
+		DBG("No Memory available for meta data");
+		return NULL;
+	}
+	mdata->title = g_new0(gchar, METADATA_MAX_STRING_LEN);
+	mdata->artist = g_new0(gchar, METADATA_MAX_STRING_LEN);
+	mdata->album = g_new0(gchar, METADATA_MAX_STRING_LEN);
+	mdata->media_number = g_new0(gchar, METADATA_MAX_NUMBER_LEN);
+	mdata->total_media_count = g_new0(gchar, METADATA_MAX_NUMBER_LEN);
+	mdata->playing_time = g_new0(gchar, METADATA_MAX_NUMBER_LEN);
+
+	if (!(mdata->title) || !(mdata->artist) || !(mdata->album) ||
+			!(mdata->media_number) || !(mdata->total_media_count) ||
+			!(mdata->playing_time)) {
+		DBG("No Memory available for meta data");
+		metadata_cleanup(mdata);
+		g_free(mdata);
+		return NULL;
+	}
+
+	strcpy(mdata->title,DEFAULT_METADATA_STRING);
+	strcpy(mdata->artist,DEFAULT_METADATA_STRING);
+	strcpy(mdata->album,DEFAULT_METADATA_STRING);
+	strcpy(mdata->media_number,DEFAULT_METADATA_NUMBER);
+	strcpy(mdata->total_media_count,DEFAULT_METADATA_NUMBER);
+	strcpy(mdata->playing_time,DEFAULT_METADATA_NUMBER);
+	mdata->remaining_mdata = NULL;
+	mdata->remaining_mdata_len = 0;
+	mdata->trans_id_event_track = 0;
+	mdata->trans_id_event_playback = 0;
+	mdata->trans_id_event_addressed_player = 0;
+	mdata->trans_id_event_available_palyer = 0;
+	mdata->trans_id_get_play_status = 0;
+	mdata->reg_track_changed = FALSE;
+	mdata->reg_playback_status = FALSE;
+	mdata->reg_addressed_player = FALSE;
+	mdata->reg_available_palyer = FALSE;
+	mdata->req_get_play_status = FALSE;
+	mdata->current_play_status = STATUS_STOPPED;
+
+	control->mdata = mdata;
 
 	return control;
 }
@@ -1215,3 +1671,348 @@ gboolean avctp_remove_state_cb(unsigned int id)
 
 	return FALSE;
 }
+
+static int send_meta_data_continue_response(struct control *control,
+						uint8_t trans_id)
+{
+	struct meta_data *mdata = control->mdata;
+	int header_len = AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH + AVRCP_PKT_PARAMS_LEN;
+	int meta_data_len = mdata->remaining_mdata_len + header_len - 1;
+	unsigned char buf[meta_data_len];
+	struct avctp_header *avctp = (void *) buf;
+	struct avrcp_header *avrcp = (void *) &buf[AVCTP_HEADER_LENGTH];
+	struct avrcp_params *params = (struct avrcp_params *)(&buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH]);
+	struct meta_data_field *mdata_field= (struct meta_data_field *)(&buf[header_len]);
+	int len = 0, total_len =0, sk = g_io_channel_unix_get_fd(control->io);
+	uint8_t *op = &buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH];
+
+	memset(buf, 0, sizeof(buf));
+
+	avctp->transaction = trans_id;
+	avctp->packet_type = AVCTP_PACKET_SINGLE;
+	avctp->cr = AVCTP_RESPONSE;
+	avctp->pid = htons(AV_REMOTE_SVCLASS_ID);
+
+	avrcp->code = CTYPE_STABLE;
+	avrcp->subunit_type = SUBUNIT_PANEL;
+	avrcp->opcode = OP_VENDORDEPENDENT;
+
+	//BT SIG Company id is 0x1958
+	op[0] = 0x00;
+	op[1] = 0x19;
+	op[2] = 0x58;
+	params->pdu_id = PDU_GET_ELEMENT_ATTRIBUTES;
+	params->packet_type = AVCTP_PACKET_END;
+
+	op = (uint8_t *)params;
+	op += AVRCP_PKT_PARAMS_LEN;
+	op--;
+	memcpy(op, mdata->remaining_mdata, mdata->remaining_mdata_len);
+	g_free(mdata->remaining_mdata);
+	mdata->remaining_mdata = NULL;
+	mdata->remaining_mdata_len = 0;
+
+	if ((meta_data_len)  > AVRCP_MAX_PKT_SIZE) {
+		len = AVRCP_MAX_PKT_SIZE - AVRCP_HEADER_LENGTH -
+					AVRCP_PKT_PARAMS_LEN -1;
+		len += 1;
+		params->param_len = htons(len);
+		total_len = AVRCP_MAX_PKT_SIZE + AVCTP_HEADER_LENGTH;
+		params->packet_type = AVCTP_PACKET_CONTINUE;
+		meta_data_len -= len;
+		mdata->remaining_mdata = g_new0(gchar, meta_data_len);
+		if (!(mdata->remaining_mdata)) {
+			return -ENOMEM;
+		}
+		mdata->remaining_mdata_len = meta_data_len;
+		len = AVRCP_MAX_PKT_SIZE + AVCTP_HEADER_LENGTH;
+		memcpy(mdata->remaining_mdata, &buf[len], meta_data_len);
+	} else {
+		params->param_len = htons(meta_data_len - header_len + 1);
+		total_len = meta_data_len;
+	}
+
+	return write(sk, buf, total_len);
+}
+
+static int send_meta_data(struct control *control, uint8_t trans_id,
+				uint8_t att_mask, uint8_t att_count)
+{
+	struct meta_data *mdata = control->mdata;
+	int header_len = AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH + AVRCP_PKT_PARAMS_LEN;
+	int meta_data_len = strlen(mdata->title) + strlen(mdata->artist) +
+		strlen(mdata->album) + strlen(mdata->media_number) +
+		strlen(mdata->total_media_count) + strlen(mdata->playing_time) +
+		(METADATA_FIELD_LEN*att_count) + header_len;
+	unsigned char buf[meta_data_len];
+	struct avctp_header *avctp = (void *) buf;
+	struct avrcp_header *avrcp = (void *) &buf[AVCTP_HEADER_LENGTH];
+	struct avrcp_params *params = (struct avrcp_params *)(&buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH]);
+	struct meta_data_field *mdata_field = (struct meta_data_field *)(&buf[header_len]);
+	int len = 0, total_len =0, sk = g_io_channel_unix_get_fd(control->io);
+	uint8_t *op = &buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH];
+
+	memset(buf, 0, sizeof(buf));
+
+	avctp->transaction = trans_id;
+	avctp->packet_type = AVCTP_PACKET_SINGLE;
+	avctp->cr = AVCTP_RESPONSE;
+	avctp->pid = htons(AV_REMOTE_SVCLASS_ID);
+
+	avrcp->code = CTYPE_STABLE;
+	avrcp->subunit_type = SUBUNIT_PANEL;
+	avrcp->opcode = OP_VENDORDEPENDENT;
+
+	//BT SIG Company id is 0x1958
+	op[0] = 0x00;
+	op[1] = 0x19;
+	op[2] = 0x58;
+	params->pdu_id = PDU_GET_ELEMENT_ATTRIBUTES;
+	params->packet_type = AVCTP_PACKET_SINGLE;
+	meta_data_len = METADATA_FIELD_LEN * att_count;
+	params->capability_id = att_count;
+	DBG("Att mask is %d", att_mask);
+
+	if (att_mask & (1 << (METADATA_TITLE - 1))) {
+		mdata_field->att_id = htonl(METADATA_TITLE);
+		mdata_field->char_set_id = htons(CHARACTER_SET_UTF8);
+		len = strlen(mdata->title);
+		mdata_field->att_len = htons(len);
+		strncpy(mdata_field->val, mdata->title, len);
+		meta_data_len += len;
+		DBG("METADATA_TITLE %d %d", len, meta_data_len);
+	}
+
+	if (att_mask & (1 << (METADATA_ARTIST - 1))) {
+		op = (uint8_t *)mdata_field;
+		if (len > 0) {
+			op += METADATA_FIELD_LEN;
+			op += len;
+		}
+		mdata_field = (struct meta_data_field *)op;
+		mdata_field->att_id = htonl(METADATA_ARTIST);
+		mdata_field->char_set_id = htons(CHARACTER_SET_UTF8);
+		len = strlen(mdata->artist);
+		mdata_field->att_len = htons(len);
+		strncpy(mdata_field->val, mdata->artist, len);
+		meta_data_len += len;
+	}
+
+	if (att_mask & (1 << (METADATA_ALBUM - 1))) {
+		op = (uint8_t *)mdata_field;
+		if (len > 0) {
+			op += METADATA_FIELD_LEN;
+			op += len;
+		}
+		mdata_field = (struct meta_data_field *)op;
+		mdata_field->att_id = htonl(METADATA_ALBUM);
+		mdata_field->char_set_id = htons(CHARACTER_SET_UTF8);
+		len = strlen(mdata->album);
+		mdata_field->att_len = htons(len);
+		strncpy(mdata_field->val, mdata->album, len);
+		meta_data_len += len;
+	}
+
+	if (att_mask & (1 << (METADATA_MEDIA_NUMBER - 1))) {
+		op = (uint8_t *)mdata_field;
+		if (len > 0) {
+			op += METADATA_FIELD_LEN;
+			op += len;
+		}
+		mdata_field = (struct meta_data_field *)op;
+		mdata_field->att_id = htonl(METADATA_MEDIA_NUMBER);
+		mdata_field->char_set_id = htons(CHARACTER_SET_UTF8);
+		len = strlen(mdata->media_number);
+		mdata_field->att_len = htons(len);
+		strncpy(mdata_field->val, mdata->media_number, len);
+		meta_data_len += len;
+	}
+
+	if (att_mask & (1 << (METADATA_TOTAL_MEDIA - 1))) {
+		op = (uint8_t *)mdata_field;
+		if (len > 0) {
+			op += METADATA_FIELD_LEN;
+			op += len;
+		}
+		mdata_field = (struct meta_data_field *)op;
+		mdata_field->att_id = htonl(METADATA_TOTAL_MEDIA);
+		mdata_field->char_set_id = htons(CHARACTER_SET_UTF8);
+		len = strlen(mdata->total_media_count);
+		mdata_field->att_len = htons(len);
+		strncpy(mdata_field->val, mdata->total_media_count, len);
+		meta_data_len += len;
+	}
+
+	if (att_mask & (1 << (METADATA_PLAYING_TIME - 1))) {
+		op = (uint8_t *)mdata_field;
+		if (len > 0) {
+			op += METADATA_FIELD_LEN;
+			op += len;
+		}
+		mdata_field = (struct meta_data_field *)op;
+		mdata_field->att_id = htonl(METADATA_PLAYING_TIME);
+		mdata_field->char_set_id = htons(CHARACTER_SET_UTF8);
+		len = strlen(mdata->playing_time);
+		mdata_field->att_len = htons(len);
+		strncpy(mdata_field->val, mdata->playing_time, len);
+		meta_data_len += len;
+	}
+	if ((meta_data_len + header_len - AVCTP_HEADER_LENGTH)
+							> AVRCP_MAX_PKT_SIZE) {
+		DBG("meta len is %d header len is %d", meta_data_len, header_len);
+		len = AVRCP_MAX_PKT_SIZE - AVRCP_HEADER_LENGTH -
+					AVRCP_PKT_PARAMS_LEN;
+		len += 1;
+		params->param_len = htons(len);
+		total_len = AVRCP_MAX_PKT_SIZE + AVCTP_HEADER_LENGTH;
+		params->packet_type = AVCTP_PACKET_START;
+		meta_data_len = meta_data_len - len + 1;
+		mdata->remaining_mdata = g_new0(gchar, meta_data_len);
+		if (!(mdata->remaining_mdata)) {
+			return -ENOMEM;
+		}
+		mdata->remaining_mdata_len = meta_data_len;
+		DBG("Remain meta data len is %d", mdata->remaining_mdata_len);
+		len = AVRCP_MAX_PKT_SIZE + AVCTP_HEADER_LENGTH;
+		memcpy(mdata->remaining_mdata, &buf[len], meta_data_len);
+	} else {
+		params->param_len = htons(meta_data_len);
+		total_len = meta_data_len + header_len;
+	}
+	return write(sk, buf, total_len);
+}
+
+static int send_notification(struct control *control,
+		uint16_t event_id, uint16_t event_data)
+{
+	struct meta_data *mdata = control->mdata;
+	int header_len = AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH + AVRCP_PKT_PARAMS_LEN;
+	unsigned char buf[header_len + 8];
+	struct avctp_header *avctp = (void *) buf;
+	struct avrcp_header *avrcp = (void *) &buf[AVCTP_HEADER_LENGTH];
+	struct avrcp_params *params = (struct avrcp_params *)(&buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH]);
+	int len = 0, total_len = 0, sk = g_io_channel_unix_get_fd(control->io);
+	uint8_t *op = &buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH];
+	uint32_t *tid;
+
+	memset(buf, 0, sizeof(buf));
+
+	avctp->packet_type = AVCTP_PACKET_SINGLE;
+	avctp->cr = AVCTP_RESPONSE;
+	avctp->pid = htons(AV_REMOTE_SVCLASS_ID);
+
+	avrcp->code = CTYPE_CHANGED;
+	avrcp->subunit_type = SUBUNIT_PANEL;
+	avrcp->opcode = OP_VENDORDEPENDENT;
+
+	//BT SIG Company id is 0x1958
+	op[0] = 0x00;
+	op[1] = 0x19;
+	op[2] = 0x58;
+	params->pdu_id = PDU_RGR_NOTIFICATION_ID;
+	params->packet_type = AVCTP_PACKET_SINGLE;
+	params->capability_id = event_id;
+	op = (uint8_t *)params;
+	op += AVRCP_PKT_PARAMS_LEN;
+	tid = (uint32_t *)op;
+	switch(event_id) {
+		case EVENT_TRACK_CHANGED:
+			if (mdata->reg_track_changed == FALSE)
+				return 0;
+			*tid = htonl(0x00);
+			tid++;
+			*tid = htonl(event_data);
+			avctp->transaction = mdata->trans_id_event_track;
+			mdata->reg_track_changed = FALSE;
+			params->param_len = htons(0x9);
+			total_len = 22;
+			break;
+		case EVENT_PLAYBACK_STATUS_CHANGED:
+			mdata->current_play_status = (uint8_t) event_data;
+			if (mdata->reg_playback_status == FALSE)
+				return 0;
+			*op = event_data;
+			avctp->transaction = mdata->trans_id_event_playback;
+			mdata->reg_playback_status = FALSE;
+			params->param_len = htons(0x2);
+			total_len = 15;
+			break;
+		case EVENT_ADDRESSED_PLAYER_CHANGED:
+			if (mdata->reg_addressed_player == FALSE)
+				return 0;
+			*op = 0x0; // Player Id
+			op++;
+			*op = event_data;
+			op++;
+			*op = 0x00; // UID Counter
+			op++;
+			*op = 0x00;
+			avctp->transaction = mdata->trans_id_event_addressed_player;
+			mdata->reg_addressed_player = FALSE;
+			params->param_len = htons(0x5);
+			total_len = 18;
+			break;
+		case EVENT_AVAILABLE_PLAYERS_CHANGED:
+			if (mdata->reg_available_palyer == FALSE)
+				return 0;
+			avctp->transaction = mdata->trans_id_event_available_palyer;
+			mdata->reg_available_palyer = FALSE;
+			params->param_len = htons(0x1);
+			total_len = 14;
+			break;
+	}
+	DBG("Send Notification totallen %d", total_len);
+	return write(sk, buf, total_len);
+}
+
+static int send_play_status(struct control *control, uint32_t song_len,
+			uint32_t song_position, uint8_t play_status)
+{
+	struct meta_data *mdata = control->mdata;
+	int header_len = AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH + AVRCP_PKT_PARAMS_LEN;
+	unsigned char buf[header_len + 8];
+	struct avctp_header *avctp = (void *) buf;
+	struct avrcp_header *avrcp = (void *) &buf[AVCTP_HEADER_LENGTH];
+	struct avrcp_params *params = (struct avrcp_params *)(&buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH]);
+	int len = 0, total_len =0, sk = g_io_channel_unix_get_fd(control->io);
+	uint8_t *op = &buf[AVCTP_HEADER_LENGTH + AVRCP_HEADER_LENGTH];
+	uint32_t *tid;
+
+	memset(buf, 0, sizeof(buf));
+	DBG("send_play_status called");
+
+	if (mdata->req_get_play_status == FALSE)
+		return 0;
+
+	DBG("send_play_status executing");
+	mdata->req_get_play_status = FALSE;
+	avctp->packet_type = AVCTP_PACKET_SINGLE;
+	avctp->cr = AVCTP_RESPONSE;
+	avctp->pid = htons(AV_REMOTE_SVCLASS_ID);
+	avctp->transaction = mdata->trans_id_get_play_status;
+
+	avrcp->code = CTYPE_STABLE;
+	avrcp->subunit_type = SUBUNIT_PANEL;
+	avrcp->opcode = OP_VENDORDEPENDENT;
+
+	//BT SIG Company id is 0x1958
+	op[0] = 0x00;
+	op[1] = 0x19;
+	op[2] = 0x58;
+	params->pdu_id = PDU_GET_PLAY_STATUS_ID;
+	params->packet_type = AVCTP_PACKET_SINGLE;
+	params->param_len = htons(0x9);
+	op = (uint8_t *)params;
+	op += AVRCP_PKT_PARAMS_LEN;
+	op -= 1;
+	tid = (uint32_t *)op;
+	*tid = htonl(song_len);
+	tid++;
+	*tid = htonl(song_position);
+	tid++;
+	op = (uint8_t *)tid;
+	*op = play_status;
+	total_len = 22;
+	return write(sk, buf, total_len);
+}
+
