@@ -546,13 +546,15 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                             sizeof(value));
     if (ret >= 0) {
         adev->bt_enabled = !strcmp(value, "true");
-        _out_bt_enable(adev->output, adev->bt_enabled);
+        if (adev->output)
+            _out_bt_enable(adev->output, adev->bt_enabled);
     }
 
     ret = str_parms_get_str(parms, A2DP_SUSPENDED_PARM, value, sizeof(value));
     if (ret >= 0) {
         adev->suspended = !strcmp(value, "true");
-        _out_a2dp_suspend(adev->output, adev->suspended);
+        if (adev->output)
+            _out_a2dp_suspend(adev->output, adev->suspended);
     }
 
     pthread_mutex_unlock(&adev->lock);
@@ -688,7 +690,9 @@ static int adev_open(const hw_module_t* module, const char* name,
         return -ENOMEM;
 
     adev->bt_enabled = true;
+    adev->suspended = false;
     pthread_mutex_init(&adev->lock, NULL);
+    adev->output = NULL;
 
     adev->device.common.tag = HARDWARE_DEVICE_TAG;
     adev->device.common.version = 0;
