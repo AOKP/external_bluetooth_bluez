@@ -29,7 +29,7 @@
 #include <cutils/str_parms.h>
 
 #include <hardware/hardware.h>
-#include <hardware/audio.h>
+#include <system/audio.h>
 #include <hardware/audio_hal.h>
 
 #include <hardware_legacy/power.h>
