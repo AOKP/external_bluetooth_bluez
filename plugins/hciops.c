@@ -1013,11 +1013,12 @@ static void user_confirm_request(int index, void *ptr)
 	 * call PairingConsent callback for incoming requests. */
 	if (conn->bonding_initiator == FALSE) {
 		if ((conn->loc_cap == 0x01) &&
-			(conn->rem_cap == 0x00 || conn->rem_cap == 0x03))
+			(conn->rem_cap == 0x00 || conn->rem_cap == 0x03)) {
 			if (btd_event_user_consent(&dev->bdaddr, &req->bdaddr)
 					< 0)
 				goto fail;
 			return;
+		}
 	}
 
 	/* If no side requires MITM protection; auto-accept */
