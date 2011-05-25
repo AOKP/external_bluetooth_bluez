@@ -29,7 +29,13 @@ LOCAL_SRC_FILES:= \
 	sdpd-database.c \
 	sdp-xml.c \
 	storage.c \
-	textfile.c
+	textfile.c \
+	attrib-server.c \
+	../attrib/att.c \
+	../attrib/client.c \
+	../attrib/gatt.c \
+	../attrib/gattrib.c \
+	../attrib/utils.c \
 
 LOCAL_CFLAGS:= \
 	-DVERSION=\"4.93\" \
@@ -47,6 +53,7 @@ LOCAL_CFLAGS += \
 endif
 
 LOCAL_C_INCLUDES:= \
+	$(LOCAL_PATH)/../attrib \
 	$(LOCAL_PATH)/../btio \
 	$(LOCAL_PATH)/../lib \
 	$(LOCAL_PATH)/../gdbus \

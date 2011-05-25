@@ -60,7 +60,7 @@
 #include "sdp-xml.h"
 #include "storage.h"
 #include "btio.h"
-#include "attrib/client.h"
+#include "../attrib/client.h"
 
 #define DISCONNECT_TIMER	2
 #define DISCOVERY_TIMER		2
