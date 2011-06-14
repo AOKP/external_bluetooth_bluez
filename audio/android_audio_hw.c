@@ -30,7 +30,7 @@
 
 #include <hardware/hardware.h>
 #include <system/audio.h>
-#include <hardware/audio_hal.h>
+#include <hardware/audio.h>
 
 #include <hardware_legacy/power.h>
 
