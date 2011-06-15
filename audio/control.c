@@ -758,6 +758,9 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 				att_mask = METADATA_DEFAULT_MASK;
 			}
 			DBG("MetaData mask is %d", att_mask);
+			if (att_count > METADATA_SUPPORTED_CNT)
+				att_count = METADATA_SUPPORTED_CNT;
+			DBG("MetaData mask is %d att_count is %d", att_mask, att_count);
 			send_meta_data(control, avctp->transaction, att_mask, att_count);
 			return TRUE;
 		} else if (params->pdu_id == PDU_REQ_CONTINUE_RSP_ID) {
