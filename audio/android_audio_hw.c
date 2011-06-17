@@ -380,6 +380,16 @@ err_bt_disabled:
     return ret;
 }
 
+static int out_add_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
+{
+    return 0;
+}
+
+static int out_remove_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
+{
+    return 0;
+}
+
 static int _out_bt_enable(struct astream_out *out, bool enable)
 {
     int ret = 0;
@@ -441,6 +451,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.common.get_parameters = out_get_parameters;
     out->stream.common.set_device = out_set_device;
     out->stream.common.get_device = out_get_device;
+    out->stream.common.add_audio_effect = out_add_audio_effect;
+    out->stream.common.remove_audio_effect = out_remove_audio_effect;
     out->stream.get_latency = out_get_latency;
     out->stream.set_volume = out_set_volume;
     out->stream.write = out_write;
