@@ -83,11 +83,21 @@ LOCAL_C_INCLUDES:= \
 	system/bluetooth/bluez-clean-headers
 
 LOCAL_SHARED_LIBRARIES := \
-	libpower \
 	libcutils
+
+ifneq ($(wildcard system/bluetooth/legacy.mk),)
+LOCAL_STATIC_LIBRARIES := \
+	libpower
+
+LOCAL_MODULE := liba2dp
+else
+LOCAL_SHARED_LIBRARIES += \
+	libpower
 
 LOCAL_MODULE := audio.a2dp.default
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+endif
+
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
