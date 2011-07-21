@@ -2056,8 +2056,6 @@ static int add_headset_ag_record(struct btd_adapter* adapter)
 
 	sdp_set_info_attr(record, "Voice Gateway", 0, 0);
 
-	sdp_attr_add(record, SDP_ATTR_EXTERNAL_NETWORK, network);
-
 	if (add_record_to_server(&adapter->bdaddr, record) < 0)
 		ret = -1;
 
