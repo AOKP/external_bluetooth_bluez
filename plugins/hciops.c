@@ -2038,7 +2038,6 @@ static inline void conn_failed(int index, bdaddr_t *bdaddr, uint8_t status)
 	struct dev_info *dev = &devs[index];
 	struct bt_conn *conn;
 
-	btd_event_conn_failed(&dev->bdaddr, bdaddr, status);
 
 	conn = find_connection(dev, bdaddr);
 	if (conn == NULL)
@@ -2048,6 +2047,8 @@ static inline void conn_failed(int index, bdaddr_t *bdaddr, uint8_t status)
 
 	dev->connections = g_slist_remove(dev->connections, conn);
 	conn_free(conn);
+
+	btd_event_conn_failed(&dev->bdaddr, bdaddr, status);
 }
 
 static inline void conn_complete(int index, void *ptr)
