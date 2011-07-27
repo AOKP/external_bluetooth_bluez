@@ -132,6 +132,7 @@ struct btd_device {
 	gboolean	trusted;
 	gboolean	paired;
 	gboolean	blocked;
+	gboolean	bonded;
 
 	gboolean	authorizing;
 	gint		ref;
@@ -896,6 +897,9 @@ void device_remove_connection(struct btd_device *device, DBusConnection *conn)
 		device->disconnects = g_slist_remove(device->disconnects, msg);
 	}
 
+	if (device_is_paired(device) && !device->bonded)
+		device_set_paired(device, FALSE);
+
 	emit_property_changed(conn, device->path,
 					DEVICE_INTERFACE, "Connected",
 					DBUS_TYPE_BOOLEAN, &device->connected);
@@ -978,8 +982,10 @@ struct btd_device *device_create(DBusConnection *conn,
 	if (read_blocked(&src, &device->bdaddr))
 		device_block(conn, device);
 
-	if (read_link_key(&src, &device->bdaddr, NULL, NULL) == 0)
+	if (read_link_key(&src, &device->bdaddr, NULL, NULL) == 0) {
 		device->paired = TRUE;
+		device_set_bonded(device, TRUE);
+	}
 
 	return btd_device_ref(device);
 }
@@ -1030,6 +1036,7 @@ void device_remove_bonding(struct btd_device *device)
 
 	/* Delete the link key from storage */
 	textfile_casedel(filename, dstaddr);
+	device_set_bonded(device, FALSE);
 
 	btd_adapter_remove_bonding(device->adapter, &device->bdaddr);
 }
@@ -1857,6 +1864,16 @@ void device_set_temporary(struct btd_device *device, gboolean temporary)
 	DBG("temporary %d", temporary);
 
 	device->temporary = temporary;
+}
+
+void device_set_bonded(struct btd_device *device, gboolean bonded)
+{
+	if (!device)
+		return;
+
+	DBG("bonded %d", bonded);
+
+	device->bonded = bonded;
 }
 
 void device_set_type(struct btd_device *device, device_type_t type)
