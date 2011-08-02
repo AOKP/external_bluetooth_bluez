@@ -2146,10 +2146,12 @@ void device_bonding_complete(struct btd_device *device, uint8_t status)
 	if (auth && auth->type == AUTH_TYPE_NOTIFY && auth->agent)
 		agent_cancel(auth->agent);
 
-	if (status == 0x06) {
+	// Temporary hack till we move to mgmt interface.
+	if (status == 0x06 && auth == NULL) {
 		device_remove_bonding(device);
 		device_get_address(device, &bdaddr);
 		btd_adapter_retry_authentication(device->adapter, &bdaddr);
+		return;
 	} else if (status) {
 		device_cancel_authentication(device, TRUE);
 		device_cancel_bonding(device, status);
