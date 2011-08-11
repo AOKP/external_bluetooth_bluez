@@ -462,15 +462,8 @@ static int hciops_set_pairable(int index, gboolean pairable)
 static int hciops_power_off(int index)
 {
 	struct dev_info *dev = &devs[index];
-	uint8_t mode;
 
-	DBG("hci%d set scan mode off", index);
-	mode = SCAN_DISABLED;
-	if (hci_send_cmd(dev->sk, OGF_HOST_CTL, OCF_WRITE_SCAN_ENABLE,
-				1, &mode) < 0)
-		return -errno;
-
-	DBG("hci%d HCIDEVDOWN", index);
+	DBG("hci%d", index);
 
 	if (ioctl(dev->sk, HCIDEVDOWN, index) < 0 && errno != EALREADY)
 		return -errno;
