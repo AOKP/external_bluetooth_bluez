@@ -758,7 +758,7 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 				packet_size = packet_size + 4;
 			} else if (caps->capability_id == CAP_EVENTS_SUPPORTED_ID) {
 				avrcp->code = CTYPE_STABLE;
-				caps->params.param_len = htons(4);
+				caps->params.param_len = htons(6);
 				operands[0] = 0x2; // Capability Count
 				operands[1] = EVENT_PLAYBACK_STATUS_CHANGED;
 				operands[2] = EVENT_TRACK_CHANGED;
@@ -1706,13 +1706,12 @@ static int send_meta_data_continue_response(struct control *control,
 {
 	struct meta_data *mdata = control->mdata;
 	int header_len = sizeof(struct avrcp_params);
-	int meta_data_len = mdata->remaining_mdata_len + header_len;
-	unsigned char buf[meta_data_len];
+	int meta_data_len = mdata->remaining_mdata_len;
+	unsigned char buf[meta_data_len + header_len];
 	struct avrcp_params *params = (struct avrcp_params *) buf;
 	struct avrcp_header *avrcp = &params->avrcp;
 	struct avctp_header *avctp = &avrcp->avctp;
-	struct meta_data_field *mdata_field = (struct meta_data_field *) &buf[header_len];
-	int len = 0, total_len = 0, sk = g_io_channel_unix_get_fd(control->io);
+	int sk = g_io_channel_unix_get_fd(control->io);
 
 	memset(buf, 0, sizeof(buf));
 
@@ -1727,32 +1726,29 @@ static int send_meta_data_continue_response(struct control *control,
 
 	set_company_id(params->company_id, IEEEID_BTSIG);
 	params->pdu_id = PDU_GET_ELEMENT_ATTRIBUTES;
-	params->packet_type = AVCTP_PACKET_END;
 
 	memcpy(buf + header_len, mdata->remaining_mdata, mdata->remaining_mdata_len);
-	g_free(mdata->remaining_mdata);
-	mdata->remaining_mdata = NULL;
-	mdata->remaining_mdata_len = 0;
 
-	if (meta_data_len > AVRCP_MAX_PKT_SIZE) {
-		len = AVRCP_MAX_PKT_SIZE - header_len + sizeof(struct avctp_header);
-		params->param_len = htons(len);
-		total_len = AVRCP_MAX_PKT_SIZE + sizeof(struct avctp_header);
+	if (meta_data_len + header_len - sizeof(struct avctp_header) > AVRCP_MAX_PKT_SIZE) {
+		int possible_len = AVRCP_MAX_PKT_SIZE - header_len + sizeof(struct avctp_header);
+
+		memcpy(mdata->remaining_mdata, buf + header_len + possible_len,
+		       mdata->remaining_mdata_len - possible_len);
+		mdata->remaining_mdata_len -= possible_len;
+
 		params->packet_type = AVCTP_PACKET_CONTINUE;
-		meta_data_len -= len;
-		mdata->remaining_mdata = g_new0(gchar, meta_data_len);
-		if (!(mdata->remaining_mdata)) {
-			return -ENOMEM;
-		}
-		mdata->remaining_mdata_len = meta_data_len;
-		len = AVRCP_MAX_PKT_SIZE + sizeof(struct avctp_header);
-		memcpy(mdata->remaining_mdata, buf + len, meta_data_len);
+		meta_data_len = possible_len;
 	} else {
-		params->param_len = htons(meta_data_len - header_len + 1);
-		total_len = meta_data_len;
+		params->packet_type = AVCTP_PACKET_END;
+
+		g_free(mdata->remaining_mdata);
+		mdata->remaining_mdata = NULL;
+		mdata->remaining_mdata_len = 0;
 	}
 
-	return write(sk, buf, total_len);
+	params->param_len = htons(meta_data_len);
+
+	return write(sk, buf, meta_data_len + header_len);
 }
 
 static int send_meta_data(struct control *control, uint8_t trans_id,
@@ -1760,11 +1756,12 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 {
 	struct meta_data *mdata = control->mdata;
 	int header_len = sizeof(struct avrcp_caps);
+	/* calculate for the worst case */
 	int meta_data_len = strlen(mdata->title) + strlen(mdata->artist) +
 		strlen(mdata->album) + strlen(mdata->media_number) +
 		strlen(mdata->total_media_count) + strlen(mdata->playing_time) +
-		(sizeof(struct meta_data_field) * att_count) + header_len;
-	unsigned char buf[meta_data_len];
+		(sizeof(struct meta_data_field) * att_count);
+	unsigned char buf[meta_data_len + header_len];
 	struct avrcp_caps *caps = (struct avrcp_caps *) buf;
 	struct avrcp_params *params = &caps->params;
 	struct avrcp_header *avrcp = &params->avrcp;
@@ -1787,10 +1784,10 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 	set_company_id(params->company_id, IEEEID_BTSIG);
 	params->pdu_id = PDU_GET_ELEMENT_ATTRIBUTES;
 	params->packet_type = AVCTP_PACKET_SINGLE;
-	meta_data_len = sizeof(struct meta_data_field) * att_count;
 	caps->capability_id = att_count;
 	DBG("Att mask is %d", att_mask);
 
+	meta_data_len = sizeof(struct meta_data_field) * att_count;
 	op = (uint8_t *) mdata_field;
 
 	if (att_mask & (1 << (METADATA_TITLE - 1))) {
@@ -1868,25 +1865,25 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		meta_data_len += len;
 	}
 	if ((meta_data_len + header_len - sizeof(struct avctp_header)) > AVRCP_MAX_PKT_SIZE) {
-		DBG("meta len is %d header len is %d", meta_data_len, header_len);
-		len = AVRCP_MAX_PKT_SIZE - sizeof(struct avrcp_params) + sizeof(struct avctp_header);
-		params->param_len = htons(len);
-		total_len = AVRCP_MAX_PKT_SIZE + sizeof(struct avctp_header);
+		int possible_len = AVRCP_MAX_PKT_SIZE - header_len + sizeof(struct avctp_header);
+		DBG("meta len is %d header len is %d -> possible %d", meta_data_len, header_len, possible_len);
+
 		params->packet_type = AVCTP_PACKET_START;
-		meta_data_len = meta_data_len - len + 1;
-		mdata->remaining_mdata = g_new0(gchar, meta_data_len);
+
+		mdata->remaining_mdata = g_new0(gchar, meta_data_len - possible_len);
 		if (!(mdata->remaining_mdata)) {
 			return -ENOMEM;
 		}
-		mdata->remaining_mdata_len = meta_data_len;
+		mdata->remaining_mdata_len = meta_data_len - possible_len;
 		DBG("Remain meta data len is %d", mdata->remaining_mdata_len);
-		len = AVRCP_MAX_PKT_SIZE + sizeof(struct avctp_header);
-		memcpy(mdata->remaining_mdata, &buf[len], meta_data_len);
-	} else {
-		params->param_len = htons(meta_data_len);
-		total_len = meta_data_len + header_len;
+
+		memcpy(mdata->remaining_mdata, buf + header_len + possible_len,
+		       mdata->remaining_mdata_len);
+		meta_data_len = possible_len;
 	}
-	return write(sk, buf, total_len);
+	params->param_len = htons(meta_data_len);
+
+	return write(sk, buf, meta_data_len + header_len);
 }
 
 static int send_notification(struct control *control,
