@@ -113,6 +113,7 @@
 
 /* AVRCP1.3 PDU IDs */
 #define PDU_GET_CAPABILITY_ID		0x10
+#define PDU_LIST_PLAYER_APP_SETT_ATTR	0x11
 #define PDU_GET_ELEMENT_ATTRIBUTES	0x20
 #define PDU_RGR_NOTIFICATION_ID		0X31
 #define PDU_REQ_CONTINUE_RSP_ID		0X40
@@ -141,7 +142,6 @@
 #define ERROR_UID_NOT_EXIST	0X09
 
 /* AVRCP1.3 MetaData Attributes ID */
-#define METADATA_DEFAULT_MASK	0x7F
 #define METADATA_TITLE		0X1
 #define METADATA_ARTIST		0X2
 #define METADATA_ALBUM		0X3
@@ -150,11 +150,12 @@
 #define METADATA_GENRE		0X6
 #define METADATA_PLAYING_TIME	0X7
 
+#define METADATA_SUPPORTED_MASK	0x5F
+#define METADATA_MAX_FIELDS	6
 #define METADATA_MAX_STRING_LEN	150
 #define METADATA_MAX_NUMBER_LEN	40
 #define DEFAULT_METADATA_STRING	"Unknown"
 #define DEFAULT_METADATA_NUMBER	"1234567890"
-#define METADATA_SUPPORTED_CNT	6
 #define AVRCP_MAX_PKT_SIZE	512
 
 /* AVRCP1.3 Character set */
@@ -239,8 +240,9 @@ struct avrcp_caps {
 	uint8_t capability_id;
 } __attribute__ ((packed));
 
-struct avrcp_cmd_get_elem_attributes {
-	struct avrcp_caps caps;
+struct avrcp_cmd_get_elem_attributes_req {
+	struct avrcp_params params;
+	uint64_t identifier;
 	uint8_t count;
 	uint32_t attributes[0];
 } __attribute__ ((packed));
@@ -353,7 +355,7 @@ static GSList *avctp_callbacks = NULL;
 static void auth_cb(DBusError *derr, void *user_data);
 
 static int send_meta_data(struct control *control, uint8_t trans_id,
-				uint8_t att_mask, uint8_t att_count);
+				uint8_t att_mask);
 static int send_meta_data_continue_response(struct control *control,
 				uint8_t trans_id);
 static int send_notification(struct control *control,
@@ -665,7 +667,7 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 	unsigned char buf[1024], *operands;
 	struct avctp_header *avctp;
 	struct avrcp_header *avrcp;
-	struct avrcp_caps *caps;
+	struct avrcp_params *params;
 	int ret, packet_size, operand_count, sock;
 	struct meta_data *mdata = control->mdata;
 
@@ -703,7 +705,7 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 
 	operands = buf + sizeof(struct avrcp_header);
 	operand_count = ret - sizeof(struct avrcp_header);
-	caps = (struct avrcp_caps *)buf;
+	params = (struct avrcp_params *)buf;
 
 	DBG("AVRCP %s 0x%01X, subunit_type 0x%02X, subunit_id 0x%01X, "
 			"opcode 0x%02X, %d operands",
@@ -745,69 +747,68 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 			(avrcp->code == CTYPE_STATUS || avrcp->code == CTYPE_NOTIFY
 			|| avrcp->code == CTYPE_CONTROL) &&
 			avrcp->opcode == OP_VENDORDEPENDENT) {
+		int error_code = -1;
+		struct avrcp_caps *caps = (struct avrcp_caps *) buf;
+		operands = (unsigned char *)caps + sizeof(struct avrcp_caps);
+
 		DBG("Got Vendor Dep opcode");
-		if (caps->params.pdu_id == PDU_GET_CAPABILITY_ID) {
+
+		if (params->pdu_id == PDU_GET_CAPABILITY_ID) {
 			DBG("Pdu id is PDU_GET_CAPABILITY_ID");
 			avctp->cr = AVCTP_RESPONSE;
-			operands = (unsigned char *)caps + sizeof(struct avrcp_caps);
 			if (caps->capability_id == CAP_COMPANY_ID) {
 				avrcp->code = CTYPE_STABLE;
-				caps->params.param_len = htons(5);
+				params->param_len = htons(5);
 				operands[0] = 0x1; // Capability Count
 				set_company_id(operands + 1, IEEEID_BTSIG);
-				packet_size = packet_size + 4;
+				packet_size = sizeof(struct avrcp_caps) + 4;
 			} else if (caps->capability_id == CAP_EVENTS_SUPPORTED_ID) {
 				avrcp->code = CTYPE_STABLE;
-				caps->params.param_len = htons(6);
+				params->param_len = htons(4);
 				operands[0] = 0x2; // Capability Count
 				operands[1] = EVENT_PLAYBACK_STATUS_CHANGED;
 				operands[2] = EVENT_TRACK_CHANGED;
-				packet_size = packet_size + 3;
+				packet_size = sizeof(struct avrcp_caps) + 3;
 			} else {
-				avctp->cr = AVCTP_RESPONSE;
-				avrcp->code = CTYPE_REJECTED;
-				caps->params.param_len = htons(1);
-				caps->capability_id = ERROR_INVALID_PARAMETER;
+				error_code = ERROR_INVALID_PARAMETER;
 			}
-		} else if (caps->params.pdu_id == PDU_GET_ELEMENT_ATTRIBUTES) {
+		} else if (params->pdu_id == PDU_LIST_PLAYER_APP_SETT_ATTR) {
+			operands = (unsigned char *)caps + sizeof(struct avrcp_params);
+			avctp->cr = AVCTP_RESPONSE;
+			avrcp->code = CTYPE_STABLE;
+			params->param_len = htons(1);
+			operands[0] = 0; // attribute count
+			packet_size = sizeof(struct avrcp_params) + 1;
+		} else if (params->pdu_id == PDU_GET_ELEMENT_ATTRIBUTES) {
 			DBG("Pdu id is PDU_GET_ELEMENT_ATTRIBUTES");
-			struct avrcp_cmd_get_elem_attributes *attr =
-				(struct avrcp_cmd_get_elem_attributes *) caps;
+			struct avrcp_cmd_get_elem_attributes_req *attr =
+				(struct avrcp_cmd_get_elem_attributes_req *) params;
 			DBG("Received att_count is %d", attr->count);
-			uint8_t att_count = attr->count;
-			uint8_t att_mask = 0;
-			uint8_t index;
-			for (index = 0; index < att_count; index++) {
+			uint8_t att_mask = 0, index;
+			for (index = 0; index < attr->count; index++) {
 				int att_val = htonl(attr->attributes[index]);
-				att_mask |=  1 << (att_val - 1);
+				int mask = 1 << (att_val - 1);
+				if (mask & METADATA_SUPPORTED_MASK) {
+					att_mask |= mask;
+				}
 			}
-			if (att_count == 0) {
-				att_count = METADATA_SUPPORTED_CNT;
-				att_mask = METADATA_DEFAULT_MASK;
+			if (att_mask == 0) {
+				att_mask = METADATA_SUPPORTED_MASK;
 			}
-			DBG("MetaData mask is %d", att_mask);
-			if (att_count > METADATA_SUPPORTED_CNT)
-				att_count = METADATA_SUPPORTED_CNT;
-			DBG("MetaData mask is %d att_count is %d", att_mask, att_count);
-			send_meta_data(control, avctp->transaction, att_mask, att_count);
+			DBG("MetaData mask is %d att_count is %d", att_mask, attr->count);
+			send_meta_data(control, avctp->transaction, att_mask);
 			return TRUE;
-		} else if (caps->params.pdu_id == PDU_REQ_CONTINUE_RSP_ID) {
+		} else if (params->pdu_id == PDU_REQ_CONTINUE_RSP_ID) {
 			if (mdata->remaining_mdata_len == 0) {
-				avctp->cr = AVCTP_RESPONSE;
-				avrcp->code = CTYPE_REJECTED;
-				caps->params.param_len = htons(1);
-				caps->capability_id = ERROR_INVALID_PARAMETER;
+				error_code = ERROR_INVALID_PARAMETER;
 			} else {
 				send_meta_data_continue_response(control, avctp->transaction);
 				return TRUE;
 			}
 
-		} else if (caps->params.pdu_id == PDU_ABORT_CONTINUE_RSP_ID) {
+		} else if (params->pdu_id == PDU_ABORT_CONTINUE_RSP_ID) {
 			if (mdata->remaining_mdata_len == 0) {
-				avctp->cr = AVCTP_RESPONSE;
-				avrcp->code = CTYPE_REJECTED;
-				caps->params.param_len = htons(1);
-				caps->capability_id = ERROR_INVALID_PARAMETER;
+				error_code = ERROR_INVALID_PARAMETER;
 			} else {
 				mdata->remaining_mdata_len = 0;
 				g_free(mdata->remaining_mdata);
@@ -815,13 +816,12 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 				avctp->cr = AVCTP_RESPONSE;
 				avrcp->code = CTYPE_STABLE;
 			}
-		} else if (caps->params.pdu_id == PDU_RGR_NOTIFICATION_ID) {
+		} else if (params->pdu_id == PDU_RGR_NOTIFICATION_ID) {
 			avctp->cr = AVCTP_RESPONSE;
 			if (caps->capability_id == EVENT_TRACK_CHANGED) {
 				mdata->trans_id_event_track = avctp->transaction;
 				mdata->reg_track_changed = TRUE;
 				avrcp->code = CTYPE_INTERIM;
-				operands = (unsigned char *)caps + sizeof(struct avrcp_caps);
 				int index;
 				if (mdata->current_play_status == STATUS_STOPPED) {
 					for (index = 0; index < 8; index++, operands++)
@@ -830,23 +830,19 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 					for (index = 0; index < 8; index++, operands++)
 						*operands = 0x00;
 				}
-				caps->params.param_len = htons(9);
-				packet_size += 4;
+				params->param_len = htons(9);
+				packet_size = sizeof(struct avrcp_caps) + 8;
 			} else if (caps->capability_id == EVENT_PLAYBACK_STATUS_CHANGED) {
 				mdata->trans_id_event_playback = avctp->transaction;
 				mdata->reg_playback_status = TRUE;
 				avrcp->code = CTYPE_INTERIM;
-				caps->params.param_len = htons(2);
-				operands = (unsigned char *)caps + sizeof(struct avrcp_caps);
+				params->param_len = htons(2);
 				*operands = mdata->current_play_status;
-				packet_size -= 3;
+				packet_size = sizeof(struct avrcp_caps) + 1;
 			} else {
-				avctp->cr = AVCTP_RESPONSE;
-				avrcp->code = CTYPE_REJECTED;
-				caps->params.param_len = htons(1);
-				caps->capability_id = ERROR_INVALID_PARAMETER;
+				error_code = ERROR_INVALID_PARAMETER;
 			}
-		} else if (caps->params.pdu_id == PDU_GET_PLAY_STATUS_ID) {
+		} else if (params->pdu_id == PDU_GET_PLAY_STATUS_ID) {
 			g_dbus_emit_signal(control->dev->conn, control->dev->path,
 					AUDIO_CONTROL_INTERFACE, "GetPlayStatus",
 					DBUS_TYPE_INVALID);
@@ -854,11 +850,15 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 			mdata->req_get_play_status = TRUE;
 			return TRUE;
 		} else {
+			error_code = ERROR_INVALID_PDU;
+		}
+
+		if (error_code >= 0) {
 			avctp->cr = AVCTP_RESPONSE;
 			avrcp->code = CTYPE_REJECTED;
-			caps->params.param_len = htons(1);
-			caps->capability_id = ERROR_INVALID_PDU;
-			packet_size += 1;
+			params->param_len = htons(1);
+			caps->capability_id = error_code;
+			packet_size = sizeof(struct avrcp_caps);
 		}
 	} else {
 		avctp->cr = AVCTP_RESPONSE;
@@ -1751,8 +1751,7 @@ static int send_meta_data_continue_response(struct control *control,
 	return write(sk, buf, meta_data_len + header_len);
 }
 
-static int send_meta_data(struct control *control, uint8_t trans_id,
-				uint8_t att_mask, uint8_t att_count)
+static int send_meta_data(struct control *control, uint8_t trans_id, uint8_t att_mask)
 {
 	struct meta_data *mdata = control->mdata;
 	int header_len = sizeof(struct avrcp_caps);
@@ -1760,14 +1759,14 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 	int meta_data_len = strlen(mdata->title) + strlen(mdata->artist) +
 		strlen(mdata->album) + strlen(mdata->media_number) +
 		strlen(mdata->total_media_count) + strlen(mdata->playing_time) +
-		(sizeof(struct meta_data_field) * att_count);
+		(sizeof(struct meta_data_field) * METADATA_MAX_FIELDS);
 	unsigned char buf[meta_data_len + header_len];
 	struct avrcp_caps *caps = (struct avrcp_caps *) buf;
 	struct avrcp_params *params = &caps->params;
 	struct avrcp_header *avrcp = &params->avrcp;
 	struct avctp_header *avctp = &avrcp->avctp;
 	struct meta_data_field *mdata_field = (struct meta_data_field *) &buf[header_len];
-	int len = 0, total_len = 0, sk = g_io_channel_unix_get_fd(control->io);
+	int count = 0, len = 0, total_len = 0, sk = g_io_channel_unix_get_fd(control->io);
 	uint8_t *op;
 
 	memset(buf, 0, sizeof(buf));
@@ -1784,10 +1783,9 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 	set_company_id(params->company_id, IEEEID_BTSIG);
 	params->pdu_id = PDU_GET_ELEMENT_ATTRIBUTES;
 	params->packet_type = AVCTP_PACKET_SINGLE;
-	caps->capability_id = att_count;
 	DBG("Att mask is %d", att_mask);
 
-	meta_data_len = sizeof(struct meta_data_field) * att_count;
+	meta_data_len = 0;
 	op = (uint8_t *) mdata_field;
 
 	if (att_mask & (1 << (METADATA_TITLE - 1))) {
@@ -1796,8 +1794,9 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		len = strlen(mdata->title);
 		mdata_field->att_len = htons(len);
 		strncpy(mdata_field->val, mdata->title, len);
-		meta_data_len += len;
+		meta_data_len += len + sizeof(struct meta_data_field);
 		DBG("METADATA_TITLE %d %d", len, meta_data_len);
+		count++;
 	}
 
 	if (att_mask & (1 << (METADATA_ARTIST - 1))) {
@@ -1810,7 +1809,8 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		len = strlen(mdata->artist);
 		mdata_field->att_len = htons(len);
 		strncpy(mdata_field->val, mdata->artist, len);
-		meta_data_len += len;
+		meta_data_len += len + sizeof(struct meta_data_field);
+		count++;
 	}
 
 	if (att_mask & (1 << (METADATA_ALBUM - 1))) {
@@ -1823,7 +1823,8 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		len = strlen(mdata->album);
 		mdata_field->att_len = htons(len);
 		strncpy(mdata_field->val, mdata->album, len);
-		meta_data_len += len;
+		meta_data_len += len + sizeof(struct meta_data_field);
+		count++;
 	}
 
 	if (att_mask & (1 << (METADATA_MEDIA_NUMBER - 1))) {
@@ -1836,7 +1837,8 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		len = strlen(mdata->media_number);
 		mdata_field->att_len = htons(len);
 		strncpy(mdata_field->val, mdata->media_number, len);
-		meta_data_len += len;
+		meta_data_len += len + sizeof(struct meta_data_field);
+		count++;
 	}
 
 	if (att_mask & (1 << (METADATA_TOTAL_MEDIA - 1))) {
@@ -1849,7 +1851,8 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		len = strlen(mdata->total_media_count);
 		mdata_field->att_len = htons(len);
 		strncpy(mdata_field->val, mdata->total_media_count, len);
-		meta_data_len += len;
+		meta_data_len += len + sizeof(struct meta_data_field);
+		count++;
 	}
 
 	if (att_mask & (1 << (METADATA_PLAYING_TIME - 1))) {
@@ -1862,8 +1865,12 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		len = strlen(mdata->playing_time);
 		mdata_field->att_len = htons(len);
 		strncpy(mdata_field->val, mdata->playing_time, len);
-		meta_data_len += len;
+		meta_data_len += len + sizeof(struct meta_data_field);
+		count++;
 	}
+
+	caps->capability_id = count;
+
 	if ((meta_data_len + header_len - sizeof(struct avctp_header)) > AVRCP_MAX_PKT_SIZE) {
 		int possible_len = AVRCP_MAX_PKT_SIZE - header_len + sizeof(struct avctp_header);
 		DBG("meta len is %d header len is %d -> possible %d", meta_data_len, header_len, possible_len);
@@ -1881,7 +1888,7 @@ static int send_meta_data(struct control *control, uint8_t trans_id,
 		       mdata->remaining_mdata_len);
 		meta_data_len = possible_len;
 	}
-	params->param_len = htons(meta_data_len);
+	params->param_len = htons(meta_data_len + header_len - sizeof(struct avrcp_params));
 
 	return write(sk, buf, meta_data_len + header_len);
 }
@@ -1896,6 +1903,8 @@ static int send_notification(struct control *control,
 	struct avrcp_header *avrcp = &params->avrcp;
 	struct avctp_header *avctp = &avrcp->avctp;
 	int len = 0, total_len = 0, sk = g_io_channel_unix_get_fd(control->io);
+
+	memset(&event, 0, sizeof(event));
 
 	avctp->packet_type = AVCTP_PACKET_SINGLE;
 	avctp->cr = AVCTP_RESPONSE;
@@ -1982,7 +1991,7 @@ static int send_play_status(struct control *control, uint32_t song_len,
 	set_company_id(params->company_id, IEEEID_BTSIG);
 	params->pdu_id = PDU_GET_PLAY_STATUS_ID;
 	params->packet_type = AVCTP_PACKET_SINGLE;
-	params->param_len = sizeof(status) - sizeof(status.params);
+	params->param_len = htons(sizeof(status) - sizeof(status.params));
 
 	status.song_len = htonl(song_len);
 	status.song_pos = htonl(song_position);
