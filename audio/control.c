@@ -107,6 +107,9 @@
 #define BACKWARD_OP		0x4c
 
 #define QUIRK_NO_RELEASE	1 << 0
+#define QUIRK_NO_CAPABILITIES	1 << 1
+#define QUIRK_NO_METADATA	1 << 2
+#define QUIRK_NO_NOTIFICATIONS	1 << 3
 
 /* BT SIG IDs */
 #define SIG_ID_BTSIG		0X1958
@@ -330,6 +333,7 @@ struct control {
 	gboolean target;
 
 	uint8_t key_quirks[256];
+	uint8_t avrcp_quirks;
 
 	gboolean ignore_pause;
 	struct meta_data *mdata;
@@ -753,7 +757,8 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 
 		DBG("Got Vendor Dep opcode");
 
-		if (params->pdu_id == PDU_GET_CAPABILITY_ID) {
+		if (params->pdu_id == PDU_GET_CAPABILITY_ID &&
+			!(control->avrcp_quirks & QUIRK_NO_CAPABILITIES)) {
 			DBG("Pdu id is PDU_GET_CAPABILITY_ID");
 			avctp->cr = AVCTP_RESPONSE;
 			if (caps->capability_id == CAP_COMPANY_ID) {
@@ -772,14 +777,16 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 			} else {
 				error_code = ERROR_INVALID_PARAMETER;
 			}
-		} else if (params->pdu_id == PDU_LIST_PLAYER_APP_SETT_ATTR) {
+		} else if (params->pdu_id == PDU_LIST_PLAYER_APP_SETT_ATTR &&
+				!(control->avrcp_quirks & QUIRK_NO_CAPABILITIES)) {
 			operands = (unsigned char *)caps + sizeof(struct avrcp_params);
 			avctp->cr = AVCTP_RESPONSE;
 			avrcp->code = CTYPE_STABLE;
 			params->param_len = htons(1);
 			operands[0] = 0; // attribute count
 			packet_size = sizeof(struct avrcp_params) + 1;
-		} else if (params->pdu_id == PDU_GET_ELEMENT_ATTRIBUTES) {
+		} else if (params->pdu_id == PDU_GET_ELEMENT_ATTRIBUTES &&
+				!(control->avrcp_quirks & QUIRK_NO_METADATA)) {
 			DBG("Pdu id is PDU_GET_ELEMENT_ATTRIBUTES");
 			struct avrcp_cmd_get_elem_attributes_req *attr =
 				(struct avrcp_cmd_get_elem_attributes_req *) params;
@@ -816,7 +823,8 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 				avctp->cr = AVCTP_RESPONSE;
 				avrcp->code = CTYPE_STABLE;
 			}
-		} else if (params->pdu_id == PDU_RGR_NOTIFICATION_ID) {
+		} else if (params->pdu_id == PDU_RGR_NOTIFICATION_ID &&
+				!(control->avrcp_quirks & QUIRK_NO_NOTIFICATIONS)) {
 			avctp->cr = AVCTP_RESPONSE;
 			if (caps->capability_id == EVENT_TRACK_CHANGED) {
 				mdata->trans_id_event_track = avctp->transaction;
@@ -842,7 +850,8 @@ static gboolean control_cb(GIOChannel *chan, GIOCondition cond,
 			} else {
 				error_code = ERROR_INVALID_PARAMETER;
 			}
-		} else if (params->pdu_id == PDU_GET_PLAY_STATUS_ID) {
+		} else if (params->pdu_id == PDU_GET_PLAY_STATUS_ID &&
+				!(control->avrcp_quirks & QUIRK_NO_NOTIFICATIONS)) {
 			g_dbus_emit_signal(control->dev->conn, control->dev->path,
 					AUDIO_CONTROL_INTERFACE, "GetPlayStatus",
 					DBUS_TYPE_INVALID);
@@ -1592,6 +1601,30 @@ void control_update(struct audio_device *dev, uint16_t uuid16)
 		control->target = TRUE;
 }
 
+static uint8_t get_avrcp_quirks(struct audio_device *dev)
+{
+	char name[MAX_NAME_LENGTH + 1];
+	uint8_t quirks = 0;
+
+	device_get_name(dev->btd_dev, name, sizeof(name));
+
+	if (g_str_equal(name, "Ford Audio")) {
+		/* The Sony car stereo Ford is using under their brand as
+		 * '6000 CD' has a completely broken AVRCP 1.3 implementation.
+		 * After recognizing AVRCP 1.3 TG capabilities and exchanging
+		 * a few PDUs, the car stereo disconnects and reconnects BT,
+		 * also resetting USB devices if connected to it.
+		 * To avoid that and allow at least HFP and A2DP to work,
+		 * prevent any AVRCP 1.3 PDUs from being sent.
+		 */
+		quirks |= QUIRK_NO_CAPABILITIES;
+		quirks |= QUIRK_NO_METADATA;
+		quirks |= QUIRK_NO_NOTIFICATIONS;
+	}
+
+	return quirks;
+}
+
 struct control *control_init(struct audio_device *dev, uint16_t uuid16)
 {
 	struct control *control;
@@ -1610,6 +1643,7 @@ struct control *control_init(struct audio_device *dev, uint16_t uuid16)
 	control->dev = dev;
 	control->state = AVCTP_STATE_DISCONNECTED;
 	control->uinput = -1;
+	control->avrcp_quirks = get_avrcp_quirks(dev);
 
 	if (uuid16 == AV_REMOTE_TARGET_SVCLASS_ID)
 		control->target = TRUE;
