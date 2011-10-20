@@ -200,7 +200,7 @@ static int out_standby_stream_locked(struct astream_out *out)
     if (out->standby || !out->data)
         return 0;
 
-    LOGV_IF(!out->bt_enabled, "Standby skip stop: enabled %d", out->bt_enabled);
+    ALOGV_IF(!out->bt_enabled, "Standby skip stop: enabled %d", out->bt_enabled);
     if (out->bt_enabled)
         ret = a2dp_stop(out->data);
     release_wake_lock(A2DP_WAKE_LOCK_NAME);
@@ -214,7 +214,7 @@ static int out_close_stream_locked(struct astream_out *out)
     out_standby_stream_locked(out);
 
     if (out->data) {
-        LOGV("%s: calling a2dp_cleanup()", __func__);
+        ALOGV("%s: calling a2dp_cleanup()", __func__);
         a2dp_cleanup(out->data);
         out->data = NULL;
     }
@@ -322,7 +322,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
 
     pthread_mutex_lock(&out->lock);
     if (!out->bt_enabled || out->suspended) {
-        LOGV("a2dp %s: bluetooth disabled bt_en %d, suspended %d",
+        ALOGV("a2dp %s: bluetooth disabled bt_en %d, suspended %d",
              out->bt_enabled, out->suspended);
         ret = -1;
         goto err_bt_disabled;
@@ -360,7 +360,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     now = system_time();
     elapsed_us = (now - out->last_write_time) / 1000UL;
     if (elapsed_us < (out->buffer_duration_us / 4)) {
-        LOGV("A2DP sink runs too fast");
+        ALOGV("A2DP sink runs too fast");
         usleep(out->buffer_duration_us - elapsed_us);
     }
     out->last_write_time = now;
@@ -426,7 +426,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     /* one output stream at a time */
     if (adev->output) {
-        LOGV("output exists");
+        ALOGV("output exists");
         ret = -EBUSY;
         goto err_output_exists;
     }
@@ -477,7 +477,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (!_out_validate_parms(out, format ? *format : 0,
                              channels ? *channels : 0,
                              sample_rate ? *sample_rate : 0)) {
-        LOGV("invalid parameters");
+        ALOGV("invalid parameters");
         ret = -EINVAL;
         goto err_validate_parms;
     }

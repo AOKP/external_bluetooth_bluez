@@ -64,7 +64,7 @@
 #endif
 
 #ifdef ENABLE_VERBOSE
-#define VDBG LOGV
+#define VDBG ALOGV
 #else
 #define VDBG(fmt, arg...)
 #endif
