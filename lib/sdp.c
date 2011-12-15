@@ -4522,24 +4522,30 @@ static inline int sdp_is_local(const bdaddr_t *device)
 
 static int sdp_connect_local(sdp_session_t *session)
 {
-	struct sockaddr_un sa;
+	union {
+		struct sockaddr_un un;
+		struct sockaddr sa;
+	} sa;
 
 	session->sock = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (session->sock < 0)
 		return -1;
 	session->local = 1;
 
-	sa.sun_family = AF_UNIX;
-	strcpy(sa.sun_path, SDP_UNIX_PATH);
+	sa.un.sun_family = AF_UNIX;
+	strcpy(sa.un.sun_path, SDP_UNIX_PATH);
 
-	return connect(session->sock, (struct sockaddr *) &sa, sizeof(sa));
+	return connect(session->sock, &sa.sa, sizeof(sa.un));
 }
 
 static int sdp_connect_l2cap(const bdaddr_t *src,
 		const bdaddr_t *dst, sdp_session_t *session)
 {
 	uint32_t flags = session->flags;
-	struct sockaddr_l2 sa;
+	union {
+		struct sockaddr_l2 l2;
+		struct sockaddr sa;
+	} sa;
 	int sk;
 
 	session->sock = socket(PF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
@@ -4554,14 +4560,14 @@ static int sdp_connect_l2cap(const bdaddr_t *src,
 		fcntl(sk, F_SETFL, arg | O_NONBLOCK);
 	}
 
-	memset(&sa, 0, sizeof(sa));
+	memset(&sa.l2, 0, sizeof(sa.l2));
 
-	sa.l2_family = AF_BLUETOOTH;
-	sa.l2_psm = 0;
+	sa.l2.l2_family = AF_BLUETOOTH;
+	sa.l2.l2_psm = 0;
 
 	if (bacmp(src, BDADDR_ANY)) {
-		sa.l2_bdaddr = *src;
-		if (bind(sk, (struct sockaddr *) &sa, sizeof(sa)) < 0)
+		sa.l2.l2_bdaddr = *src;
+		if (bind(sk, &sa.sa, sizeof(sa.l2)) < 0)
 			return -1;
 	}
 
@@ -4570,11 +4576,11 @@ static int sdp_connect_l2cap(const bdaddr_t *src,
 		setsockopt(sk, SOL_SOCKET, SO_LINGER, &l, sizeof(l));
 	}
 
-	sa.l2_psm = htobs(SDP_PSM);
-	sa.l2_bdaddr = *dst;
+	sa.l2.l2_psm = htobs(SDP_PSM);
+	sa.l2.l2_bdaddr = *dst;
 
 	do {
-		int ret = connect(sk, (struct sockaddr *) &sa, sizeof(sa));
+		int ret = connect(sk, &sa.sa, sizeof(sa.l2));
 		if (!ret)
 			return 0;
 		if (ret < 0 && (flags & SDP_NON_BLOCKING) &&

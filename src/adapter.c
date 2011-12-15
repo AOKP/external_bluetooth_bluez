@@ -1949,7 +1949,10 @@ static DBusMessage *add_rfcomm_service_record(DBusConnection *conn,
 	uint8_t channel;
 	uint32_t *uuid_p;
 	uint32_t uuid_net[4];   // network order
-	uint64_t uuid_host[2];  // host
+	union {
+		uint64_t u64[2];  // host
+		uint32_t u32[4];
+	} uuid_host;
 	sdp_record_t *record;
 	struct btd_adapter *adapter = data;
 
@@ -1957,13 +1960,13 @@ static DBusMessage *add_rfcomm_service_record(DBusConnection *conn,
 
 	if (!dbus_message_get_args(msg, NULL,
 			DBUS_TYPE_STRING, &name,
-			DBUS_TYPE_UINT64, &uuid_host[0],
-			DBUS_TYPE_UINT64, &uuid_host[1],
+			DBUS_TYPE_UINT64, &uuid_host.u64[0],
+			DBUS_TYPE_UINT64, &uuid_host.u64[1],
 			DBUS_TYPE_UINT16, &channel,
 			DBUS_TYPE_INVALID))
 		return btd_error_invalid_args(msg);
 
-	uuid_p = (uint32_t *)uuid_host;
+	uuid_p = uuid_host.u32;
 	uuid_net[1] = htonl(*uuid_p++);
 	uuid_net[0] = htonl(*uuid_p++);
 	uuid_net[3] = htonl(*uuid_p++);

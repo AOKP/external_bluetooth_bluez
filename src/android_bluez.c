@@ -103,7 +103,10 @@ static int vendor_high_priority(int fd, uint16_t handle) {
 
 static int get_hci_sock() {
     int sock = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI);
-    struct sockaddr_hci addr;
+    union {
+        struct sockaddr_hci hci;
+        struct sockaddr sa;
+    } addr;
     int opt;
 
     if(sock < 0) {
@@ -118,10 +121,10 @@ static int get_hci_sock() {
     }
 
     /* Bind socket to the HCI device */
-    memset(&addr, 0, sizeof(addr));
-    addr.hci_family = AF_BLUETOOTH;
-    addr.hci_dev = 0;  // hci0
-    if(bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+    memset(&addr.hci, 0, sizeof(addr.hci));
+    addr.hci.hci_family = AF_BLUETOOTH;
+    addr.hci.hci_dev = 0;  // hci0
+    if(bind(sock, &addr.sa, sizeof(addr)) < 0) {
         error("Can't attach to device hci0. %s(%d)\n",
              strerror(errno),
              errno);
