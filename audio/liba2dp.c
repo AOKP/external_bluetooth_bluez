@@ -58,7 +58,7 @@
 #define BUFFER_SIZE 2048
 
 #ifdef ENABLE_DEBUG
-#define DBG LOGD
+#define DBG ALOGD
 #else
 #define DBG(fmt, arg...)
 #endif
