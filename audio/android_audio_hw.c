@@ -142,7 +142,7 @@ static int out_set_sample_rate(struct audio_stream *stream, uint32_t rate)
 {
     struct astream_out *out = (struct astream_out *)stream;
 
-    LOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
+    ALOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
     return 0;
 }
 
@@ -167,7 +167,7 @@ static int out_get_format(const struct audio_stream *stream)
 static int out_set_format(struct audio_stream *stream, int format)
 {
     struct astream_out *out = (struct astream_out *)stream;
-    LOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
+    ALOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
     return 0;
 }
 
@@ -205,7 +205,7 @@ static int _out_init_locked(struct astream_out *out, const char *addr)
     /* XXX: shouldn't this use the sample_rate/channel_count from 'out'? */
     ret = a2dp_init(44100, 2, &out->data);
     if (ret < 0) {
-        LOGE("a2dp_init failed err: %d\n", ret);
+        ALOGE("a2dp_init failed err: %d\n", ret);
         out->data = NULL;
         return ret;
     }
@@ -242,9 +242,9 @@ static int out_standby_stream_locked(struct astream_out *out)
         ret = pthread_cond_timeout_np(&out->write_cond,
                                 &out->lock,
                                 BUF_WRITE_COMPLETION_TIMEOUT_MS);
-        LOGE_IF(ret != 0, "out_standby_stream_locked() wait cond error %d", ret);
+        ALOGE_IF(ret != 0, "out_standby_stream_locked() wait cond error %d", ret);
     }
-    LOGE_IF(attempts == 0, "out_standby_stream_locked() a2dp_write() would not stop!!!");
+    ALOGE_IF(attempts == 0, "out_standby_stream_locked() a2dp_write() would not stop!!!");
 
     ALOGV_IF(!out->bt_enabled, "Standby skip stop: enabled %d", out->bt_enabled);
     if (out->bt_enabled) {
@@ -519,7 +519,7 @@ static void *_out_buf_thread_func(void *context)
                 pthread_mutex_unlock(&out->lock);
 
                 if (ret < 0) {
-                    LOGE("%s: a2dp_write failed (%d)\n", __func__, ret);
+                    ALOGE("%s: a2dp_write failed (%d)\n", __func__, ret);
                     /* skip pending frames in case of write error */
                     _out_inc_rd_idx_locked(out, frames);
                     break;
@@ -715,7 +715,7 @@ static void adev_close_output_stream_locked(struct adev_a2dp *dev,
 
     /* invalid stream? */
     if (!adev->output || adev->output != out) {
-        LOGE("%s: unknown stream %p (ours is %p)", __func__, out, adev->output);
+        ALOGE("%s: unknown stream %p (ours is %p)", __func__, out, adev->output);
         return;
     }
 

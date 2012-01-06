@@ -80,7 +80,7 @@
 #define MAX_BITPOOL 64
 #define MIN_BITPOOL 2
 
-#define ERR LOGE
+#define ERR ALOGE
 
 /* Number of packets to buffer in the stream socket */
 #define PACKET_BUFFER_COUNT		10
