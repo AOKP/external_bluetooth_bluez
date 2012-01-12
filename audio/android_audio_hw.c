@@ -88,7 +88,7 @@ struct astream_out {
     uint32_t                sample_rate;
     size_t                  buffer_size;
     uint32_t                channels;
-    int                     format;
+    audio_format_t          format;
 
     int                     fd;
     bool                    standby;
@@ -158,13 +158,13 @@ static uint32_t out_get_channels(const struct audio_stream *stream)
     return out->channels;
 }
 
-static int out_get_format(const struct audio_stream *stream)
+static audio_format_t out_get_format(const struct audio_stream *stream)
 {
     const struct astream_out *out = (const struct astream_out *)stream;
     return out->format;
 }
 
-static int out_set_format(struct audio_stream *stream, int format)
+static audio_format_t out_set_format(struct audio_stream *stream, audio_format_t format)
 {
     struct astream_out *out = (struct astream_out *)stream;
     ALOGE("(%s:%d) %s: Implement me!", __FILE__, __LINE__, __func__);
@@ -218,7 +218,7 @@ static int _out_init_locked(struct astream_out *out, const char *addr)
     return 0;
 }
 
-static bool _out_validate_parms(struct astream_out *out, int format,
+static bool _out_validate_parms(struct astream_out *out, audio_format_t format,
                                 uint32_t chans, uint32_t rate)
 {
     if ((format && (format != out->format)) ||
@@ -598,7 +598,7 @@ static int _out_a2dp_suspend(struct astream_out *out, bool suspend)
 }
 
 static int adev_open_output_stream(struct audio_hw_device *dev,
-                                   uint32_t devices, int *format,
+                                   uint32_t devices, audio_format_t *format,
                                    uint32_t *channels, uint32_t *sample_rate,
                                    struct audio_stream_out **stream_out)
 {
@@ -853,7 +853,7 @@ static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
 }
 
 static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
-                                         uint32_t sample_rate, int format,
+                                         uint32_t sample_rate, audio_format_t format,
                                          int channel_count)
 {
     /* no input */
@@ -861,7 +861,7 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
 }
 
 static int adev_open_input_stream(struct audio_hw_device *dev, uint32_t devices,
-                                  int *format, uint32_t *channels,
+                                  audio_format_t *format, uint32_t *channels,
                                   uint32_t *sample_rate,
                                   audio_in_acoustics_t acoustics,
                                   struct audio_stream_in **stream_in)
