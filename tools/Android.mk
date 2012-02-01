@@ -212,6 +212,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libbluetooth libbluetoothd
 
 LOCAL_MODULE:=bccmd
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
 endif
