@@ -2990,6 +2990,9 @@ int btd_adapter_stop(struct btd_adapter *adapter)
 	emit_property_changed(connection, adapter->path, ADAPTER_INTERFACE,
 				"Powered", DBUS_TYPE_BOOLEAN, &powered);
 
+	/* Duplicately publish the UUIDs to make sure the upper layers know */
+	adapter_emit_uuids_updated(adapter);
+
 	adapter->up = 0;
 	adapter->scan_mode = SCAN_DISABLED;
 	adapter->mode = MODE_OFF;
