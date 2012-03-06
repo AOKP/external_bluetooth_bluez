@@ -180,7 +180,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
 {
     const struct astream_out *out = (const struct astream_out *)stream;
 
-    return (out->buffer_duration_us / 1000) + 200;
+    return ((out->buffer_duration_us * BUF_NUM_PERIODS) / 1000) + 200;
 }
 
 static int out_set_volume(struct audio_stream_out *stream, float left,
