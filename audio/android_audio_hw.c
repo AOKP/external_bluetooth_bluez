@@ -42,7 +42,6 @@
 #define A2DP_SUSPENDED_PARM            "A2dpSuspended"
 #define BLUETOOOTH_ENABLED_PARM        "bluetooth_enabled"
 
-#define OUT_SINK_ADDR_PARM             "a2dp_sink_address"
 
 /* number of periods in pcm buffer (one period corresponds to buffer size reported to audio flinger
  * by out_get_buffer_size() */
@@ -291,7 +290,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
     pthread_mutex_lock(&out->lock);
 
-    ret = str_parms_get_str(parms, OUT_SINK_ADDR_PARM, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_A2DP_SINK_ADDRESS, value, sizeof(value));
     if (ret >= 0) {
         /* strlen(00:00:00:00:00:00) == 17 */
         if (strlen(value) == 17) {
@@ -342,9 +341,9 @@ static char * out_get_parameters(const struct audio_stream *stream,
 
     pthread_mutex_lock(&out->lock);
 
-    ret = str_parms_get_str(parms, OUT_SINK_ADDR_PARM, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_A2DP_SINK_ADDRESS, value, sizeof(value));
     if (ret >= 0)
-        str_parms_add_str(out_parms, OUT_SINK_ADDR_PARM, out->a2dp_addr);
+        str_parms_add_str(out_parms, AUDIO_PARAMETER_A2DP_SINK_ADDRESS, out->a2dp_addr);
 
     pthread_mutex_unlock(&out->lock);
 
