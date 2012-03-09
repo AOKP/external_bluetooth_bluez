@@ -36,6 +36,11 @@
 
 #include "liba2dp.h"
 
+/* for backward compatibility with older audio framework */
+#ifndef AUDIO_PARAMETER_A2DP_SINK_ADDRESS
+    #define AUDIO_PARAMETER_A2DP_SINK_ADDRESS "a2dp_sink_address"
+#endif
+
 #define A2DP_WAKE_LOCK_NAME            "A2dpOutputStream"
 #define MAX_WRITE_RETRIES              5
 
