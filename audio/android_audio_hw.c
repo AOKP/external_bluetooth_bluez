@@ -50,7 +50,7 @@
 /* maximum time allowed by out_standby_stream_locked() for 2dp_write() to complete */
 #define BUF_WRITE_COMPLETION_TIMEOUT_MS 5000
 /* maximum time allowed by out_write() for frames to be available in in write thread buffer */
-#define BUF_WRITE_AVAILABILITY_TIMEOUT_MS 1000
+#define BUF_WRITE_AVAILABILITY_TIMEOUT_MS 5000
 /* maximum number of attempts to wait for a write completion in out_standby_stream_locked() */
 #define MAX_WRITE_COMPLETION_ATTEMPTS 5
 
@@ -180,7 +180,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
 {
     const struct astream_out *out = (const struct astream_out *)stream;
 
-    return (out->buffer_duration_us / 1000) + 200;
+    return ((out->buffer_duration_us * BUF_NUM_PERIODS) / 1000) + 200;
 }
 
 static int out_set_volume(struct audio_stream_out *stream, float left,
