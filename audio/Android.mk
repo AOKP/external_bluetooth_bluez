@@ -44,6 +44,11 @@ LOCAL_SHARED_LIBRARIES := \
 	libdbus \
 	libglib
 
+ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+ifeq ($(BOARD_USES_ALSA_AUDIO),true)
+LOCAL_CFLAGS += -DA2DP_48000_SAMPLE_RATE
+endif
+endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/bluez-plugin
 LOCAL_UNSTRIPPED_PATH := $(TARGET_OUT_SHARED_LIBRARIES_UNSTRIPPED)/bluez-plugin
@@ -84,6 +89,12 @@ LOCAL_C_INCLUDES:= \
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils
+
+ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+ifeq ($(BOARD_USES_ALSA_AUDIO),true)
+LOCAL_CFLAGS += -DA2DP_48000_SAMPLE_RATE
+endif
+endif
 
 ifneq ($(wildcard system/bluetooth/legacy.mk),)
 LOCAL_STATIC_LIBRARIES := \
