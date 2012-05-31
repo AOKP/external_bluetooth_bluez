@@ -124,6 +124,7 @@ LOCAL_MODULE:=l2ping
 
 include $(BUILD_EXECUTABLE)
 
+ifneq ($(BOARD_HAVE_BLUETOOTH_CUSTOM_HCIATTACH), true)
 #
 # hciattach
 #
@@ -154,6 +155,7 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_MODULE:=hciattach
 
 include $(BUILD_EXECUTABLE)
+endif
 
 #
 # rfcomm
