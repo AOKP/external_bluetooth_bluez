@@ -3396,11 +3396,18 @@ void adapter_emit_device_found(struct btd_adapter *adapter,
 	icon = class_to_icon(dev->class);
 
 	if (!dev->alias) {
+#ifdef ANDROID
+		/* Android doesn't fallback to name or address if there is no alias.
+		   It's safe to set alias to NULL because dict_append_entry() will
+		   silently return and not set the property when value is NULL. */
+		alias = NULL;
+#else
 		if (!dev->name) {
 			alias = g_strdup(peer_addr);
 			g_strdelimit(alias, ":", '-');
 		} else
 			alias = g_strdup(dev->name);
+#endif
 	} else
 		alias = g_strdup(dev->alias);
 

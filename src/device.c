@@ -279,6 +279,13 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	ptr = device->name;
 	dict_append_entry(&dict, "Name", DBUS_TYPE_STRING, &ptr);
 
+#ifdef ANDROID
+	/* Alias (Android doesn't fallback to name or address) */
+	if (device->alias != NULL) {
+		ptr = device->alias;
+		dict_append_entry(&dict, "Alias", DBUS_TYPE_STRING, &ptr);
+	}
+#else
 	/* Alias (fallback to name or address) */
 	if (device->alias != NULL)
 		ptr = device->alias;
@@ -288,6 +295,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	}
 
 	dict_append_entry(&dict, "Alias", DBUS_TYPE_STRING, &ptr);
+#endif
 
 	/* Class */
 	if (read_remote_class(&src, &device->bdaddr, &class) == 0) {
