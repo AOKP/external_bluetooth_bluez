@@ -1,0 +1,8 @@
+Change-Id: Ica7737e115e3b2b354aad4c7e0d791319a498d6b
+Code-Review+2: Roman Birg <romanbirg@gmail.com>
+Verified+1: Roman Birg <romanbirg@gmail.com>
+Submitted-by: Roman Birg <romanbirg@gmail.com>
+Submitted-at: Mon, 11 Jun 2012 21:58:54 -0500
+Reviewed-on: http://gerrit.sudoservers.com/1314
+Project: AOKP/external_bluetooth_bluez
+Branch: refs/heads/ics
