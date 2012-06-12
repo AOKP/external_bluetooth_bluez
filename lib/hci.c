@@ -1017,10 +1017,7 @@ done:
  * Returns device descriptor (dd). */
 int hci_open_dev(int dev_id)
 {
-	union {
-		struct sockaddr_hci hci;
-		struct sockaddr sa;
-	} a;
+	struct sockaddr_hci a;
 	int dd, err;
 
 	/* Create HCI socket */
@@ -1030,9 +1027,9 @@ int hci_open_dev(int dev_id)
 
 	/* Bind socket to the HCI device */
 	memset(&a, 0, sizeof(a));
-	a.hci.hci_family = AF_BLUETOOTH;
-	a.hci.hci_dev = dev_id;
-	if (bind(dd, &a.sa, sizeof(a.hci)) < 0)
+	a.hci_family = AF_BLUETOOTH;
+	a.hci_dev = dev_id;
+	if (bind(dd, (struct sockaddr *) &a, sizeof(a)) < 0)
 		goto failed;
 
 	return dd;

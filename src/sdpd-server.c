@@ -61,10 +61,7 @@ static int l2cap_sock, unix_sock;
 static int init_server(uint16_t mtu, int master, int compat)
 {
 	struct l2cap_options opts;
-	union {
-		struct sockaddr_l2 l2;
-		struct sockaddr	sa;
-	} l2addr;
+	struct sockaddr_l2 l2addr;
 	struct sockaddr_un unaddr;
 	socklen_t optlen;
 
@@ -81,12 +78,12 @@ static int init_server(uint16_t mtu, int master, int compat)
 		return -1;
 	}
 
-	memset(&l2addr.l2, 0, sizeof(l2addr.l2));
-	l2addr.l2.l2_family = AF_BLUETOOTH;
-	bacpy(&l2addr.l2.l2_bdaddr, BDADDR_ANY);
-	l2addr.l2.l2_psm = htobs(SDP_PSM);
+	memset(&l2addr, 0, sizeof(l2addr));
+	l2addr.l2_family = AF_BLUETOOTH;
+	bacpy(&l2addr.l2_bdaddr, BDADDR_ANY);
+	l2addr.l2_psm = htobs(SDP_PSM);
 
-	if (bind(l2cap_sock, &l2addr.sa, sizeof(l2addr.l2)) < 0) {
+	if (bind(l2cap_sock, (struct sockaddr *) &l2addr, sizeof(l2addr)) < 0) {
 		error("binding L2CAP socket: %s", strerror(errno));
 		return -1;
 	}
@@ -213,21 +210,15 @@ static gboolean io_accept_event(GIOChannel *chan, GIOCondition cond, gpointer da
 		return FALSE;
 
 	if (data == &l2cap_sock) {
-		union {
-			struct sockaddr_l2 l2;
-			struct sockaddr sa;
-		} addr;
-		socklen_t len = sizeof(addr.l2);
+		struct sockaddr_l2 addr;
+		socklen_t len = sizeof(addr);
 
-		nsk = accept(l2cap_sock, &addr.sa, &len);
+		nsk = accept(l2cap_sock, (struct sockaddr *) &addr, &len);
 	} else if (data == &unix_sock) {
-		union {
-			struct sockaddr_un un;
-			struct sockaddr sa;
-		} addr;
-		socklen_t len = sizeof(addr.un);
+		struct sockaddr_un addr;
+		socklen_t len = sizeof(addr);
 
-		nsk = accept(unix_sock, &addr.sa, &len);
+		nsk = accept(unix_sock, (struct sockaddr *) &addr, &len);
 	} else
 		return FALSE;
 
