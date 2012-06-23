@@ -1,0 +1,10 @@
+Change-Id: I1f5ddd7933280a62c1a16c6076dbb4d26a0efcd9
+Code-Review+2: Roman Birg <romanbirg@gmail.com>
+Verified+1: Roman Birg <romanbirg@gmail.com>
+Code-Review+1: Gary Dezern <garyd9@gmail.com>
+Code-Review+1: Arnav Gupta <championswimmer@gmail.com>
+Submitted-by: Roman Birg <romanbirg@gmail.com>
+Submitted-at: Sat, 23 Jun 2012 17:45:33 -0400
+Reviewed-on: http://gerrit.sudoservers.com/1129
+Project: AOKP/external_bluetooth_bluez
+Branch: refs/heads/ics
