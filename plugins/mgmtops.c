@@ -691,8 +691,10 @@ static int mgmt_add_uuid(int index, uuid_t *uuid, uint8_t svc_hint)
 	hdr->len = htobs(sizeof(*cp));
 	hdr->index = htobs(index);
 
-	ntoh128((uint128_t *) uuid128.value.uuid128.data, &uint128);
-	htob128(&uint128, (uint128_t *) cp->uuid);
+	void *d=uuid128.value.uuid128.data;
+	void *u=cp->uuid;
+	ntoh128((uint128_t *) d, &uint128);
+	htob128(&uint128, u);
 
 	cp->svc_hint = svc_hint;
 
@@ -719,8 +721,10 @@ static int mgmt_remove_uuid(int index, uuid_t *uuid)
 	hdr->len = htobs(sizeof(*cp));
 	hdr->index = htobs(index);
 
-	ntoh128((uint128_t *) uuid128.value.uuid128.data, &uint128);
-	htob128(&uint128, (uint128_t *) cp->uuid);
+	void *d=uuid128.value.uuid128.data;
+	void *u=cp->uuid;
+	ntoh128((uint128_t *) d, &uint128);
+	htob128(&uint128, (uint128_t *) u);
 
 	if (write(mgmt_sock, buf, sizeof(buf)) < 0)
 		return -errno;
@@ -1494,7 +1498,10 @@ static gboolean mgmt_event(GIOChannel *io, GIOCondition cond, gpointer user_data
 static int mgmt_setup(void)
 {
 	struct mgmt_hdr hdr;
-	struct sockaddr_hci addr;
+	struct {
+		struct sockaddr_hci hci;
+		struct sockaddr sa;
+	} addr;
 	GIOChannel *io;
 	GIOCondition condition;
 	int dd, err;
@@ -1504,11 +1511,11 @@ static int mgmt_setup(void)
 		return -errno;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.hci_family = AF_BLUETOOTH;
-	addr.hci_dev = HCI_DEV_NONE;
-	addr.hci_channel = HCI_CHANNEL_CONTROL;
+	addr.hci.hci_family = AF_BLUETOOTH;
+	addr.hci.hci_dev = HCI_DEV_NONE;
+	addr.hci.hci_channel = HCI_CHANNEL_CONTROL;
 
-	if (bind(dd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	if (bind(dd, &addr.sa, sizeof(addr.hci)) < 0) {
 		err = -errno;
 		goto fail;
 	}

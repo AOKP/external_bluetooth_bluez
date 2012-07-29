@@ -256,18 +256,21 @@ static void accept_add(GIOChannel *io, BtIOConnect connect, gpointer user_data,
 static int l2cap_bind(int sock, const bdaddr_t *src, uint16_t psm,
 						uint16_t cid, GError **err)
 {
-	struct sockaddr_l2 addr;
+	union {
+		struct sockaddr_l2 l2;
+		struct sockaddr sa;
+	} addr;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.l2_family = AF_BLUETOOTH;
-	bacpy(&addr.l2_bdaddr, src);
+	addr.l2.l2_family = AF_BLUETOOTH;
+	bacpy(&addr.l2.l2_bdaddr, src);
 
 	if (cid)
-		addr.l2_cid = htobs(cid);
+		addr.l2.l2_cid = htobs(cid);
 	else
-		addr.l2_psm = htobs(psm);
+		addr.l2.l2_psm = htobs(psm);
 
-	if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	if (bind(sock, &addr.sa, sizeof(addr.l2)) < 0) {
 		ERROR_FAILED(err, "l2cap_bind", errno);
 		return -1;
 	}
@@ -279,17 +282,20 @@ static int l2cap_connect(int sock, const bdaddr_t *dst,
 					uint16_t psm, uint16_t cid)
 {
 	int err;
-	struct sockaddr_l2 addr;
+	union {
+		struct sockaddr_l2 l2;
+		struct sockaddr sa;
+	} addr;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.l2_family = AF_BLUETOOTH;
-	bacpy(&addr.l2_bdaddr, dst);
+	addr.l2.l2_family = AF_BLUETOOTH;
+	bacpy(&addr.l2.l2_bdaddr, dst);
 	if (cid)
-		addr.l2_cid = htobs(cid);
+		addr.l2.l2_cid = htobs(cid);
 	else
-		addr.l2_psm = htobs(psm);
+		addr.l2.l2_psm = htobs(psm);
 
-	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
+	err = connect(sock, &addr.sa, sizeof(addr.l2));
 	if (err < 0 && !(errno == EAGAIN || errno == EINPROGRESS))
 		return err;
 
@@ -591,14 +597,17 @@ static gboolean l2cap_set(int sock, int sec_level, uint16_t imtu,
 static int rfcomm_bind(int sock,
 		const bdaddr_t *src, uint8_t channel, GError **err)
 {
-	struct sockaddr_rc addr;
+	union {
+		struct sockaddr_rc rc;
+		struct sockaddr sa;
+	} addr;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.rc_family = AF_BLUETOOTH;
-	bacpy(&addr.rc_bdaddr, src);
-	addr.rc_channel = channel;
+	addr.rc.rc_family = AF_BLUETOOTH;
+	bacpy(&addr.rc.rc_bdaddr, src);
+	addr.rc.rc_channel = channel;
 
-	if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	if (bind(sock, &addr.sa, sizeof(addr.rc)) < 0) {
 		ERROR_FAILED(err, "rfcomm_bind", errno);
 		return -1;
 	}
@@ -609,14 +618,16 @@ static int rfcomm_bind(int sock,
 static int rfcomm_connect(int sock, const bdaddr_t *dst, uint8_t channel)
 {
 	int err;
-	struct sockaddr_rc addr;
-
+	union {
+		struct sockaddr_rc rc;
+		struct sockaddr sa;
+	} addr;
 	memset(&addr, 0, sizeof(addr));
-	addr.rc_family = AF_BLUETOOTH;
-	bacpy(&addr.rc_bdaddr, dst);
-	addr.rc_channel = channel;
+	addr.rc.rc_family = AF_BLUETOOTH;
+	bacpy(&addr.rc.rc_bdaddr, dst);
+	addr.rc.rc_channel = channel;
 
-	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
+	err = connect(sock, &addr.sa, sizeof(addr.rc));
 	if (err < 0 && !(errno == EAGAIN || errno == EINPROGRESS))
 		return err;
 
@@ -642,13 +653,16 @@ static gboolean rfcomm_set(int sock, int sec_level, int master,
 
 static int sco_bind(int sock, const bdaddr_t *src, GError **err)
 {
-	struct sockaddr_sco addr;
+	union {
+		struct sockaddr_sco sco;
+		struct sockaddr sa;
+	} addr;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.sco_family = AF_BLUETOOTH;
-	bacpy(&addr.sco_bdaddr, src);
+	addr.sco.sco_family = AF_BLUETOOTH;
+	bacpy(&addr.sco.sco_bdaddr, src);
 
-	if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	if (bind(sock, &addr.sa, sizeof(addr.sco)) < 0) {
 		ERROR_FAILED(err, "sco_bind", errno);
 		return -1;
 	}
@@ -658,14 +672,17 @@ static int sco_bind(int sock, const bdaddr_t *src, GError **err)
 
 static int sco_connect(int sock, const bdaddr_t *dst)
 {
-	struct sockaddr_sco addr;
+	union {
+		struct sockaddr_sco sco;
+		struct sockaddr sa;
+	} addr;
 	int err;
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sco_family = AF_BLUETOOTH;
-	bacpy(&addr.sco_bdaddr, dst);
+	memset(&addr.sco, 0, sizeof(addr.sco));
+	addr.sco.sco_family = AF_BLUETOOTH;
+	bacpy(&addr.sco.sco_bdaddr, dst);
 
-	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
+	err = connect(sock, &addr.sa, sizeof(addr.sco));
 	if (err < 0 && !(errno == EAGAIN || errno == EINPROGRESS))
 		return err;
 
@@ -847,7 +864,14 @@ static gboolean l2cap_get(int sock, GError **err, BtIOOption opt1,
 								va_list args)
 {
 	BtIOOption opt = opt1;
-	struct sockaddr_l2 src, dst;
+	union {
+		struct sockaddr_l2 l2;
+		struct sockaddr sa;
+	} src;
+	union {
+		struct sockaddr_l2 l2;
+		struct sockaddr sa;
+	} dst;
 	struct l2cap_options l2o;
 	int flags;
 	uint8_t dev_class[3];
@@ -862,23 +886,23 @@ static gboolean l2cap_get(int sock, GError **err, BtIOOption opt1,
 		return FALSE;
 	}
 
-	if (!get_peers(sock, (struct sockaddr *) &src,
-				(struct sockaddr *) &dst, sizeof(src), err))
+	if (!get_peers(sock, &src.sa,
+				&dst.sa, sizeof(src.l2), err))
 		return FALSE;
 
 	while (opt != BT_IO_OPT_INVALID) {
 		switch (opt) {
 		case BT_IO_OPT_SOURCE:
-			ba2str(&src.l2_bdaddr, va_arg(args, char *));
+			ba2str(&src.l2.l2_bdaddr, va_arg(args, char *));
 			break;
 		case BT_IO_OPT_SOURCE_BDADDR:
-			bacpy(va_arg(args, bdaddr_t *), &src.l2_bdaddr);
+			bacpy(va_arg(args, bdaddr_t *), &src.l2.l2_bdaddr);
 			break;
 		case BT_IO_OPT_DEST:
-			ba2str(&dst.l2_bdaddr, va_arg(args, char *));
+			ba2str(&dst.l2.l2_bdaddr, va_arg(args, char *));
 			break;
 		case BT_IO_OPT_DEST_BDADDR:
-			bacpy(va_arg(args, bdaddr_t *), &dst.l2_bdaddr);
+			bacpy(va_arg(args, bdaddr_t *), &dst.l2.l2_bdaddr);
 			break;
 		case BT_IO_OPT_DEFER_TIMEOUT:
 			len = sizeof(int);
@@ -895,12 +919,12 @@ static gboolean l2cap_get(int sock, GError **err, BtIOOption opt1,
 				return FALSE;
 			break;
 		case BT_IO_OPT_PSM:
-			*(va_arg(args, uint16_t *)) = src.l2_psm ?
-						src.l2_psm : dst.l2_psm;
+			*(va_arg(args, uint16_t *)) = src.l2.l2_psm ?
+						src.l2.l2_psm : dst.l2.l2_psm;
 			break;
 		case BT_IO_OPT_CID:
-			*(va_arg(args, uint16_t *)) = src.l2_cid ?
-						src.l2_cid : dst.l2_cid;
+			*(va_arg(args, uint16_t *)) = src.l2.l2_cid ?
+						src.l2.l2_cid : dst.l2.l2_cid;
 			break;
 		case BT_IO_OPT_OMTU:
 			*(va_arg(args, uint16_t *)) = l2o.omtu;
@@ -982,29 +1006,36 @@ static gboolean rfcomm_get(int sock, GError **err, BtIOOption opt1,
 								va_list args)
 {
 	BtIOOption opt = opt1;
-	struct sockaddr_rc src, dst;
+	union {
+		struct sockaddr_rc rc;
+		struct sockaddr sa;
+	} src;
+	union {
+		struct sockaddr_rc rc;
+		struct sockaddr sa;
+	} dst;
 	int flags;
 	socklen_t len;
 	uint8_t dev_class[3];
 	uint16_t handle;
 
-	if (!get_peers(sock, (struct sockaddr *) &src,
-				(struct sockaddr *) &dst, sizeof(src), err))
+	if (!get_peers(sock, &src.sa,
+				&dst.sa, sizeof(src.rc), err))
 		return FALSE;
 
 	while (opt != BT_IO_OPT_INVALID) {
 		switch (opt) {
 		case BT_IO_OPT_SOURCE:
-			ba2str(&src.rc_bdaddr, va_arg(args, char *));
+			ba2str(&src.rc.rc_bdaddr, va_arg(args, char *));
 			break;
 		case BT_IO_OPT_SOURCE_BDADDR:
-			bacpy(va_arg(args, bdaddr_t *), &src.rc_bdaddr);
+			bacpy(va_arg(args, bdaddr_t *), &src.rc.rc_bdaddr);
 			break;
 		case BT_IO_OPT_DEST:
-			ba2str(&dst.rc_bdaddr, va_arg(args, char *));
+			ba2str(&dst.rc.rc_bdaddr, va_arg(args, char *));
 			break;
 		case BT_IO_OPT_DEST_BDADDR:
-			bacpy(va_arg(args, bdaddr_t *), &dst.rc_bdaddr);
+			bacpy(va_arg(args, bdaddr_t *), &dst.rc.rc_bdaddr);
 			break;
 		case BT_IO_OPT_DEFER_TIMEOUT:
 			len = sizeof(int);
@@ -1021,14 +1052,14 @@ static gboolean rfcomm_get(int sock, GError **err, BtIOOption opt1,
 				return FALSE;
 			break;
 		case BT_IO_OPT_CHANNEL:
-			*(va_arg(args, uint8_t *)) = src.rc_channel ?
-					src.rc_channel : dst.rc_channel;
+			*(va_arg(args, uint8_t *)) = src.rc.rc_channel ?
+					src.rc.rc_channel : dst.rc.rc_channel;
 			break;
 		case BT_IO_OPT_SOURCE_CHANNEL:
-			*(va_arg(args, uint8_t *)) = src.rc_channel;
+			*(va_arg(args, uint8_t *)) = src.rc.rc_channel;
 			break;
 		case BT_IO_OPT_DEST_CHANNEL:
-			*(va_arg(args, uint8_t *)) = dst.rc_channel;
+			*(va_arg(args, uint8_t *)) = dst.rc.rc_channel;
 			break;
 		case BT_IO_OPT_MASTER:
 			len = sizeof(flags);
@@ -1093,7 +1124,14 @@ static int sco_get_info(int sock, uint16_t *handle, uint8_t *dev_class)
 static gboolean sco_get(int sock, GError **err, BtIOOption opt1, va_list args)
 {
 	BtIOOption opt = opt1;
-	struct sockaddr_sco src, dst;
+	union {
+		struct sockaddr_sco sco;
+		struct sockaddr sa;
+	} src;
+	union {
+		struct sockaddr_sco sco;
+		struct sockaddr sa;
+	} dst;
 	struct sco_options sco_opt;
 	socklen_t len;
 	uint8_t dev_class[3];
@@ -1106,23 +1144,23 @@ static gboolean sco_get(int sock, GError **err, BtIOOption opt1, va_list args)
 		return FALSE;
 	}
 
-	if (!get_peers(sock, (struct sockaddr *) &src,
-				(struct sockaddr *) &dst, sizeof(src), err))
+	if (!get_peers(sock, &src.sa,
+				&dst.sa, sizeof(src.sco), err))
 		return FALSE;
 
 	while (opt != BT_IO_OPT_INVALID) {
 		switch (opt) {
 		case BT_IO_OPT_SOURCE:
-			ba2str(&src.sco_bdaddr, va_arg(args, char *));
+			ba2str(&src.sco.sco_bdaddr, va_arg(args, char *));
 			break;
 		case BT_IO_OPT_SOURCE_BDADDR:
-			bacpy(va_arg(args, bdaddr_t *), &src.sco_bdaddr);
+			bacpy(va_arg(args, bdaddr_t *), &src.sco.sco_bdaddr);
 			break;
 		case BT_IO_OPT_DEST:
-			ba2str(&dst.sco_bdaddr, va_arg(args, char *));
+			ba2str(&dst.sco.sco_bdaddr, va_arg(args, char *));
 			break;
 		case BT_IO_OPT_DEST_BDADDR:
-			bacpy(va_arg(args, bdaddr_t *), &dst.sco_bdaddr);
+			bacpy(va_arg(args, bdaddr_t *), &dst.sco.sco_bdaddr);
 			break;
 		case BT_IO_OPT_MTU:
 		case BT_IO_OPT_IMTU:

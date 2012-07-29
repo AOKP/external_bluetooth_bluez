@@ -2795,7 +2795,10 @@ static gboolean io_stack_event(GIOChannel *chan, GIOCondition cond,
 
 static int hciops_setup(void)
 {
-	struct sockaddr_hci addr;
+	union {
+		struct sockaddr_hci hci;
+		struct sockaddr sa;
+	} addr;
 	struct hci_filter flt;
 	GIOChannel *ctl_io, *child_io;
 	int sock, err;
@@ -2838,9 +2841,9 @@ static int hciops_setup(void)
 	}
 
 	memset(&addr, 0, sizeof(addr));
-	addr.hci_family = AF_BLUETOOTH;
-	addr.hci_dev = HCI_DEV_NONE;
-	if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	addr.hci.hci_family = AF_BLUETOOTH;
+	addr.hci.hci_dev = HCI_DEV_NONE;
+	if (bind(sock, &addr.sa, sizeof(addr.hci)) < 0) {
 		err = -errno;
 		error("Can't bind HCI socket: %s (%d)", strerror(-err), -err);
 		return err;

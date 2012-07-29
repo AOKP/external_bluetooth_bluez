@@ -1045,17 +1045,20 @@ send_rsp:
 
 void handle_request(int sk, uint8_t *data, int len)
 {
-	struct sockaddr_l2 sa;
+	union {
+		struct sockaddr_l2 l2;
+		struct sockaddr	sa;
+	} sa;
 	socklen_t size;
 	sdp_req_t req;
 
-	size = sizeof(sa);
-	if (getpeername(sk, (struct sockaddr *) &sa, &size) < 0) {
+	size = sizeof(sa.l2);
+	if (getpeername(sk, &sa.sa, &size) < 0) {
 		error("getpeername: %s", strerror(errno));
 		return;
 	}
 
-	if (sa.l2_family == AF_BLUETOOTH) {
+	if (sa.l2.l2_family == AF_BLUETOOTH) {
 		struct l2cap_options lo;
 
 		memset(&lo, 0, sizeof(lo));
@@ -1066,18 +1069,18 @@ void handle_request(int sk, uint8_t *data, int len)
 			return;
 		}
 
-		bacpy(&req.bdaddr, &sa.l2_bdaddr);
+		bacpy(&req.bdaddr, &sa.l2.l2_bdaddr);
 		req.mtu = lo.omtu;
 		req.local = 0;
-		memset(&sa, 0, sizeof(sa));
-		size = sizeof(sa);
+		memset(&sa.l2, 0, sizeof(sa.l2));
+		size = sizeof(sa.l2);
 
-		if (getsockname(sk, (struct sockaddr *) &sa, &size) < 0) {
+		if (getsockname(sk, &sa.sa, &size) < 0) {
 			error("getsockname: %s", strerror(errno));
 			return;
 		}
 
-		bacpy(&req.device, &sa.l2_bdaddr);
+		bacpy(&req.device, &sa.l2.l2_bdaddr);
 	} else {
 		bacpy(&req.device, BDADDR_ANY);
 		bacpy(&req.bdaddr, BDADDR_LOCAL);

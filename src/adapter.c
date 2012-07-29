@@ -1949,7 +1949,10 @@ static DBusMessage *add_rfcomm_service_record(DBusConnection *conn,
 	uint8_t channel;
 	uint32_t *uuid_p;
 	uint32_t uuid_net[4];   // network order
-	uint64_t uuid_host[2];  // host
+	union {
+		uint64_t u64[2];  // host
+		uint32_t u32[4];
+	} uuid_host;
 	sdp_record_t *record;
 	struct btd_adapter *adapter = data;
 
@@ -1957,13 +1960,13 @@ static DBusMessage *add_rfcomm_service_record(DBusConnection *conn,
 
 	if (!dbus_message_get_args(msg, NULL,
 			DBUS_TYPE_STRING, &name,
-			DBUS_TYPE_UINT64, &uuid_host[0],
-			DBUS_TYPE_UINT64, &uuid_host[1],
+			DBUS_TYPE_UINT64, &uuid_host.u64[0],
+			DBUS_TYPE_UINT64, &uuid_host.u64[1],
 			DBUS_TYPE_UINT16, &channel,
 			DBUS_TYPE_INVALID))
 		return btd_error_invalid_args(msg);
 
-	uuid_p = (uint32_t *)uuid_host;
+	uuid_p = uuid_host.u32;
 	uuid_net[1] = htonl(*uuid_p++);
 	uuid_net[0] = htonl(*uuid_p++);
 	uuid_net[3] = htonl(*uuid_p++);
@@ -2205,6 +2208,78 @@ static int add_pbap_pse_record(struct btd_adapter *adapter)
 	return ret;
 }
 
+static int add_mas_record(struct btd_adapter *adapter)
+{
+	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
+	uuid_t root_uuid, ftrn_uuid, l2cap_uuid, rfcomm_uuid, obex_uuid;
+	uuid_t masid_uuid, sprtd_msg_uuid;
+	uint8_t masid;
+	uint8_t  sprtd_msg;
+	sdp_profile_desc_t profile[1];
+	sdp_list_t *aproto, *proto[3];
+	sdp_record_t *record;
+	uint8_t u8_val = 0x10;
+	sdp_data_t *channel;
+	int ret = 0;
+
+	record = sdp_record_alloc();
+		if (!record) return -1;
+
+	sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+	root = sdp_list_append(0, &root_uuid);
+	sdp_set_browse_groups(record, root);
+
+	sdp_uuid16_create(&ftrn_uuid, OBEX_MAS_SVCLASS_ID);
+	svclass_id = sdp_list_append(0, &ftrn_uuid);
+	sdp_set_service_classes(record, svclass_id);
+
+	sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+	proto[0] = sdp_list_append(0, &l2cap_uuid);
+	apseq = sdp_list_append(0, proto[0]);
+
+	sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+	proto[1] = sdp_list_append(0, &rfcomm_uuid);
+	channel = sdp_data_alloc(SDP_UINT8, &u8_val);
+	proto[1] = sdp_list_append(proto[1], channel);
+	apseq = sdp_list_append(apseq, proto[1]);
+
+	sdp_uuid16_create(&obex_uuid, OBEX_UUID);
+	proto[2] = sdp_list_append(0, &obex_uuid);
+	apseq = sdp_list_append(apseq, proto[2]);
+
+	aproto = sdp_list_append(0, apseq);
+	sdp_set_access_protos(record, aproto);
+
+	sdp_uuid16_create(&profile[0].uuid, OBEX_MAP_PROFILE_ID);
+	profile[0].version = 0x0100;
+	pfseq = sdp_list_append(0, &profile[0]);
+	sdp_set_profile_descs(record, pfseq);
+
+	masid = 0x0;
+	sdp_attr_add_new(record, SDP_ATTR_MAS_INSTANCE_ID, SDP_UINT8,
+							&masid);
+
+	sprtd_msg = 0x0F;
+	sdp_attr_add_new(record, SDP_ATTR_SUPPORTED_MESSAGE_TYPES, SDP_UINT8,
+							&sprtd_msg);
+
+	sdp_set_info_attr(record, "OBEX Message Access", 0, 0);
+
+	if (add_record_to_server(&adapter->bdaddr, record) < 0)
+		ret = -1;
+
+	sdp_data_free(channel);
+	sdp_list_free(proto[0], 0);
+	sdp_list_free(proto[1], 0);
+	sdp_list_free(proto[2], 0);
+	sdp_list_free(apseq, 0);
+	sdp_list_free(aproto, 0);
+
+	if (!ret)
+		return record->handle;
+	return ret;
+}
+
 static int add_opush_record(struct btd_adapter *adapter)
 {
 	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
@@ -2310,6 +2385,9 @@ static DBusMessage *add_reserved_service_records(DBusConnection *conn,
 				break;
 			case OBEX_OBJPUSH_SVCLASS_ID:
 				ret = add_opush_record(adapter);
+				break;
+			case OBEX_MAS_SVCLASS_ID:
+				ret = add_mas_record(adapter);
 				break;
 		}
 		if (ret < 0) {
@@ -2990,9 +3068,6 @@ int btd_adapter_stop(struct btd_adapter *adapter)
 	emit_property_changed(connection, adapter->path, ADAPTER_INTERFACE,
 				"Powered", DBUS_TYPE_BOOLEAN, &powered);
 
-	/* Duplicately publish the UUIDs to make sure the upper layers know */
-	adapter_emit_uuids_updated(adapter);
-
 	adapter->up = 0;
 	adapter->scan_mode = SCAN_DISABLED;
 	adapter->mode = MODE_OFF;
@@ -3396,18 +3471,11 @@ void adapter_emit_device_found(struct btd_adapter *adapter,
 	icon = class_to_icon(dev->class);
 
 	if (!dev->alias) {
-#ifdef ANDROID
-		/* Android doesn't fallback to name or address if there is no alias.
-		   It's safe to set alias to NULL because dict_append_entry() will
-		   silently return and not set the property when value is NULL. */
-		alias = NULL;
-#else
 		if (!dev->name) {
 			alias = g_strdup(peer_addr);
 			g_strdelimit(alias, ":", '-');
 		} else
 			alias = g_strdup(dev->name);
-#endif
 	} else
 		alias = g_strdup(dev->alias);
 
