@@ -1,0 +1,12 @@
+Change-Id: I904dc56cd55da2e4c698ca3044eac7c3cf0a3c08
+Code-Review+2: Khas Mek <boushh@gmail.com>
+Verified+1: Khas Mek <boushh@gmail.com>
+Code-Review+1: Jonathan Steadman <xxwhitehawk@gmail.com>
+Code-Review+1: Gary Dezern (garyd9) <garyd9@gmail.com>
+Code-Review+1: Matt Simoni <mattsimoni78@gmail.com>
+Code-Review+1: Jack Smith <acuramdx2005@gmail.com>
+Submitted-by: Khas Mek <boushh@gmail.com>
+Submitted-at: Wed, 08 Aug 2012 15:46:49 +0100
+Reviewed-on: http://gerrit.sudoservers.com/2369
+Project: AOKP/external_bluetooth_bluez
+Branch: refs/heads/jb
