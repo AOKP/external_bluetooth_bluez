@@ -2205,6 +2205,78 @@ static int add_pbap_pse_record(struct btd_adapter *adapter)
 	return ret;
 }
 
+static int add_mas_record(struct btd_adapter *adapter)
+{
+        sdp_list_t *svclass_id, *pfseq, *apseq, *root;
+        uuid_t root_uuid, ftrn_uuid, l2cap_uuid, rfcomm_uuid, obex_uuid;
+        uuid_t masid_uuid, sprtd_msg_uuid;
+        uint8_t masid;
+        uint8_t  sprtd_msg;
+        sdp_profile_desc_t profile[1];
+        sdp_list_t *aproto, *proto[3];
+        sdp_record_t *record;
+        uint8_t u8_val = 0x10;
+        sdp_data_t *channel;
+        int ret = 0;
+
+        record = sdp_record_alloc();
+                if (!record) return -1;
+
+        sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+        root = sdp_list_append(0, &root_uuid);
+        sdp_set_browse_groups(record, root);
+
+        sdp_uuid16_create(&ftrn_uuid, OBEX_MAS_SVCLASS_ID);
+        svclass_id = sdp_list_append(0, &ftrn_uuid);
+        sdp_set_service_classes(record, svclass_id);
+
+        sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+        proto[0] = sdp_list_append(0, &l2cap_uuid);
+        apseq = sdp_list_append(0, proto[0]);
+
+        sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+        proto[1] = sdp_list_append(0, &rfcomm_uuid);
+        channel = sdp_data_alloc(SDP_UINT8, &u8_val);
+        proto[1] = sdp_list_append(proto[1], channel);
+        apseq = sdp_list_append(apseq, proto[1]);
+
+        sdp_uuid16_create(&obex_uuid, OBEX_UUID);
+        proto[2] = sdp_list_append(0, &obex_uuid);
+        apseq = sdp_list_append(apseq, proto[2]);
+
+        aproto = sdp_list_append(0, apseq);
+        sdp_set_access_protos(record, aproto);
+
+        sdp_uuid16_create(&profile[0].uuid, OBEX_MAP_PROFILE_ID);
+        profile[0].version = 0x0100;
+        pfseq = sdp_list_append(0, &profile[0]);
+        sdp_set_profile_descs(record, pfseq);
+
+        masid = 0x0;
+        sdp_attr_add_new(record, SDP_ATTR_MAS_INSTANCE_ID, SDP_UINT8,
+                                                        &masid);
+
+        sprtd_msg = 0x0F;
+        sdp_attr_add_new(record, SDP_ATTR_SUPPORTED_MESSAGE_TYPES, SDP_UINT8,
+                                                        &sprtd_msg);
+
+        sdp_set_info_attr(record, "OBEX Message Access", 0, 0);
+
+        if (add_record_to_server(&adapter->bdaddr, record) < 0)
+                ret = -1;
+
+        sdp_data_free(channel);
+        sdp_list_free(proto[0], 0);
+        sdp_list_free(proto[1], 0);
+        sdp_list_free(proto[2], 0);
+        sdp_list_free(apseq, 0);
+        sdp_list_free(aproto, 0);
+
+        if (!ret)
+                return record->handle;
+        return ret;
+}
+
 static int add_opush_record(struct btd_adapter *adapter)
 {
 	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
@@ -2311,6 +2383,9 @@ static DBusMessage *add_reserved_service_records(DBusConnection *conn,
 			case OBEX_OBJPUSH_SVCLASS_ID:
 				ret = add_opush_record(adapter);
 				break;
+                        case OBEX_MAS_SVCLASS_ID:
+                                ret = add_mas_record(adapter);
+                                break;
 		}
 		if (ret < 0) {
 			g_free(handles);

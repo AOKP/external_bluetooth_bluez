@@ -310,6 +310,8 @@ static struct uuid_def uuid16_names[] = {
 	{ 0x112e, "Phonebook Access (PBAP) - PCE", NULL, 0 },
 	{ 0x112f, "Phonebook Access (PBAP) - PSE", NULL, 0 },
 	{ 0x1130, "Phonebook Access (PBAP)", NULL, 0 },
+        { 0x1132, "Message Access Server", NULL, 0 },
+        { 0x1133, "Message Notification Server", NULL, 0 },
 	/* ... */
 	{ 0x1200, "PnPInformation",
 		did_attrib_names, sizeof(did_attrib_names)/sizeof(struct attrib_def) },
@@ -1958,6 +1960,82 @@ end:
 	return ret;
 }
 
+static int add_mas(sdp_session_t *session, svc_info_t *si)
+{
+        sdp_list_t *svclass_id, *pfseq, *apseq, *root;
+        uuid_t root_uuid, ftrn_uuid, l2cap_uuid, rfcomm_uuid, obex_uuid;
+        uuid_t masid_uuid, sprtd_msg_uuid;
+        uint8_t masid;
+        uint8_t  sprtd_msg;
+        sdp_profile_desc_t profile[1];
+        sdp_list_t *aproto, *proto[3];
+        sdp_record_t record;
+        uint8_t u8_val = si->channel ? si->channel : 0x10;
+        sdp_data_t *channel;
+        int ret = 0;
+
+        memset(&record, 0, sizeof(sdp_record_t));
+        record.handle = si->handle;
+
+        sdp_uuid16_create(&root_uuid, PUBLIC_BROWSE_GROUP);
+        root = sdp_list_append(0, &root_uuid);
+        sdp_set_browse_groups(&record, root);
+
+        sdp_uuid16_create(&ftrn_uuid, OBEX_MAS_SVCLASS_ID);
+        svclass_id = sdp_list_append(0, &ftrn_uuid);
+        sdp_set_service_classes(&record, svclass_id);
+
+        sdp_uuid16_create(&l2cap_uuid, L2CAP_UUID);
+        proto[0] = sdp_list_append(0, &l2cap_uuid);
+        apseq = sdp_list_append(0, proto[0]);
+
+        sdp_uuid16_create(&rfcomm_uuid, RFCOMM_UUID);
+        proto[1] = sdp_list_append(0, &rfcomm_uuid);
+        channel = sdp_data_alloc(SDP_UINT8, &u8_val);
+        proto[1] = sdp_list_append(proto[1], channel);
+        apseq = sdp_list_append(apseq, proto[1]);
+
+        sdp_uuid16_create(&obex_uuid, OBEX_UUID);
+        proto[2] = sdp_list_append(0, &obex_uuid);
+        apseq = sdp_list_append(apseq, proto[2]);
+
+        aproto = sdp_list_append(0, apseq);
+        sdp_set_access_protos(&record, aproto);
+
+        sdp_uuid16_create(&profile[0].uuid, OBEX_MAP_PROFILE_ID);
+        profile[0].version = 0x0100;
+        pfseq = sdp_list_append(0, &profile[0]);
+        sdp_set_profile_descs(&record, pfseq);
+
+        masid = 0x0;
+        sdp_attr_add_new(&record, SDP_ATTR_MAS_INSTANCE_ID, SDP_UINT8,
+                                                        &masid);
+
+        sprtd_msg = 0x0F;
+        sdp_attr_add_new(&record, SDP_ATTR_SUPPORTED_MESSAGE_TYPES, SDP_UINT8,
+                                                        &sprtd_msg);
+
+        sdp_set_info_attr(&record, "OBEX Message Access", 0, 0);
+
+        if (sdp_device_record_register(session, &interface, &record, SDP_RECORD_PERSIST) < 0) {
+                printf("Service Record registration failed\n");
+                ret = -1;
+                goto end;
+        }
+
+        printf("OBEX Message Access service registered\n");
+
+end:
+        sdp_data_free(channel);
+        sdp_list_free(proto[0], 0);
+        sdp_list_free(proto[1], 0);
+        sdp_list_free(proto[2], 0);
+        sdp_list_free(apseq, 0);
+        sdp_list_free(aproto, 0);
+
+        return ret;
+}
+
 static int add_directprint(sdp_session_t *session, svc_info_t *si)
 {
 	sdp_list_t *svclass_id, *pfseq, *apseq, *root;
@@ -3513,6 +3591,7 @@ struct {
 	{ "OPUSH",	OBEX_OBJPUSH_SVCLASS_ID,	add_opush	},
 	{ "FTP",	OBEX_FILETRANS_SVCLASS_ID,	add_ftp		},
 	{ "PRINT",	DIRECT_PRINTING_SVCLASS_ID,	add_directprint	},
+        { "MAS",        OBEX_MAP_SVCLASS_ID,            add_mas         },
 
 	{ "HS",		HEADSET_SVCLASS_ID,		add_headset	},
 	{ "HSAG",	HEADSET_AGW_SVCLASS_ID,		add_headset_ag	},
