@@ -505,11 +505,7 @@ static gboolean sbc_getcap_ind(struct avdtp *session, struct avdtp_local_sep *se
 	sbc_cap.cap.media_codec_type = A2DP_CODEC_SBC;
 
 #ifdef ANDROID
-#ifdef A2DP_48000_SAMPLE_RATE
-	sbc_cap.frequency = SBC_SAMPLING_FREQ_48000;
-#else
-    sbc_cap.frequency = SBC_SAMPLING_FREQ_44100;
-#endif
+	sbc_cap.frequency = SBC_SAMPLING_FREQ_44100;
 #else
 	sbc_cap.frequency = ( SBC_SAMPLING_FREQ_48000 |
 				SBC_SAMPLING_FREQ_44100 |
@@ -1786,17 +1782,10 @@ static gboolean select_sbc_params(struct sbc_codec_cap *cap,
 	cap->cap.media_type = AVDTP_MEDIA_TYPE_AUDIO;
 	cap->cap.media_codec_type = A2DP_CODEC_SBC;
 
-#ifdef A2DP_48000_SAMPLE_RATE
-	if (supported->frequency & SBC_SAMPLING_FREQ_48000)
-		cap->frequency = SBC_SAMPLING_FREQ_48000;
-	else if (supported->frequency & SBC_SAMPLING_FREQ_44100)
+	if (supported->frequency & SBC_SAMPLING_FREQ_44100)
 		cap->frequency = SBC_SAMPLING_FREQ_44100;
-#else
-    if (supported->frequency & SBC_SAMPLING_FREQ_44100)
-        cap->frequency = SBC_SAMPLING_FREQ_44100;
-    else if (supported->frequency & SBC_SAMPLING_FREQ_48000)
-        cap->frequency = SBC_SAMPLING_FREQ_48000;
-#endif
+	else if (supported->frequency & SBC_SAMPLING_FREQ_48000)
+		cap->frequency = SBC_SAMPLING_FREQ_48000;
 	else if (supported->frequency & SBC_SAMPLING_FREQ_32000)
 		cap->frequency = SBC_SAMPLING_FREQ_32000;
 	else if (supported->frequency & SBC_SAMPLING_FREQ_16000)
